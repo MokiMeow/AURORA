@@ -1,0 +1,13 @@
+secret_patterns:
+  - (?i)api[_-]?key[:=]\s*[A-Za-z0-9]{32,}
+  - (?i)secret[:=]\s*[A-Za-z0-9+/]{24,}
+
+critical_vulnerabilities_allowed: 0
+
+dependency_rules:
+  bandit:
+    severity_threshold: medium
+  semgrep:
+    categories:
+      - security
+

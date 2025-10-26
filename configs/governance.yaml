@@ -1,0 +1,17 @@
+reporting:
+  weekly_day: Monday
+  compliance_bundle: true
+  reviewers:
+    - governance@aurora.local
+    - security@aurora.local
+  escalation:
+    severity_high: pagerduty-governance
+    severity_critical: board-ops
+
+policies:
+  require_human_signoff: true
+  bias_threshold: 0.05
+  override_workflow:
+    approval_required: true
+    log_path: telemetry/policy_overrides.jsonl
+

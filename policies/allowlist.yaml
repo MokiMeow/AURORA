@@ -1,0 +1,9 @@
+dependencies:
+  - name: tree-sitter
+  - name: pgvector
+  - name: opentelemetry-sdk
+
+licenses:
+  - Apache-2.0
+  - MIT
+

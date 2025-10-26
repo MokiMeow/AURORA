@@ -1,0 +1,12 @@
+training:
+  preferred_gpu_memory_gb: 24
+  fallback:
+    mode: cpu
+    precision: 8bit
+    gradient_checkpointing: true
+
+inference:
+  planner:
+    max_batch_size: 1
+    timeout_seconds: 120
+

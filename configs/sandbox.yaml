@@ -1,0 +1,23 @@
+runtime:
+  default: docker
+  options:
+    docker:
+      image: aurora-se/runtime:latest
+      network: none
+      cpu_limit: 8
+      memory_limit: 16g
+    firecracker:
+      enabled: false
+      kernel_image: artifacts/kernel.bin
+      rootfs: artifacts/rootfs.ext4
+
+policies:
+  egress: false
+  storage_mounts:
+    - name: workspace
+      path: /workspace
+      readonly: false
+    - name: artifacts
+      path: /artifacts
+      readonly: false
+

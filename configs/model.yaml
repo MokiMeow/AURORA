@@ -1,0 +1,18 @@
+primary:
+  provider: ollama
+  endpoint: http://localhost:11434/api/generate
+  model: deepseek-r1:7b
+  timeout_seconds: 120
+critic_stack:
+  - name: gpt-4o-mini
+    endpoint: ${CRITIC_GPT4O_ENDPOINT}
+    api_key_env: CRITIC_GPT4O_API_KEY
+    enabled: false
+  - name: gemini-2.5-pro
+    endpoint: ${CRITIC_GEMINI_ENDPOINT}
+    api_key_env: CRITIC_GEMINI_API_KEY
+    enabled: false
+retry_policy:
+  max_attempts: 3
+  backoff_seconds: 5
+

@@ -1,0 +1,20 @@
+profiles:
+  fast:
+    lint: true
+    typecheck: false
+    static_analysis: true
+    fuzz: false
+    perf: false
+  balanced:
+    lint: true
+    typecheck: true
+    static_analysis: true
+    fuzz: false
+    perf: true
+  thorough:
+    lint: true
+    typecheck: true
+    static_analysis: true
+    fuzz: true
+    perf: true
+

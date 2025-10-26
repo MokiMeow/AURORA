@@ -1,0 +1,18 @@
+languages:
+  - name: python
+    tree_sitter: python
+    file_extensions: [".py"]
+    incremental: true
+  - name: typescript
+    tree_sitter: typescript
+    file_extensions: [".ts", ".tsx"]
+    incremental: true
+  - name: javascript
+    tree_sitter: javascript
+    file_extensions: [".js", ".jsx"]
+    incremental: true
+  - name: markdown
+    tree_sitter: markdown
+    file_extensions: [".md"]
+    incremental: false
+

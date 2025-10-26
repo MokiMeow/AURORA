@@ -1,0 +1,102 @@
+version: "3.9"
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  postgres:
+    image: ankane/pgvector:pg16
+    environment:
+      - POSTGRES_DB=aurora
+      - POSTGRES_USER=aurora
+      - POSTGRES_PASSWORD=aurora
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aurora"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  milvus:
+    image: milvusdb/milvus:v2.4.2
+    profiles: ["milvus"]
+    environment:
+      - MILVUS_LOGGER_LEVEL=info
+    command: ["milvus", "run", "standalone"]
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    volumes:
+      - milvus-data:/var/lib/milvus
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2024-09-22T00-33-43Z
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=aurora
+      - MINIO_ROOT_PASSWORD=aurorasecret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.106.0
+    command: ["--config", "/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./configs/observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      - grafana
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    environment:
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_SECURITY_ADMIN_USER=aurora
+      - GF_SECURITY_ADMIN_PASSWORD=aurora
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - postgres
+
+  firecracker-tools:
+    image: ghcr.io/firecracker-microvm/firecracker-tools:latest
+    profiles: ["firecracker"]
+    command: ["/bin/true"]
+    privileged: true
+    volumes:
+      - ./artifacts:/artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  ollama-data:
+  pg-data:
+  milvus-data:
+  minio-data:
+  grafana-data:
+

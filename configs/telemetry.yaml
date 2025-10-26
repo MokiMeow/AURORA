@@ -1,0 +1,15 @@
+otel:
+  endpoint: http://localhost:4317
+  service_name: aurora-se
+  environment: local
+
+prometheus:
+  scrape_interval: 15s
+  targets:
+    - http://localhost:9464/metrics
+
+logging:
+  level: INFO
+  format: json
+  file: telemetry/pdca.jsonl
+
