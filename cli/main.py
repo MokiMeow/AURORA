@@ -8,6 +8,10 @@ from pathlib import Path
 import typer
 
 from aurora import __version__
+from aurora.indexer.config_loader import load_indexer_config
+from aurora.indexer.store import GraphStore
+from aurora.indexer.tree import TreeSitterParser
+from aurora.indexer.embedding import EmbeddingStore
 from aurora.indexer.service import IndexJobConfig, IndexerService
 from aurora.planner.service import PlannerConfig, PlannerService
 
@@ -37,11 +41,16 @@ def index(
     full: bool = typer.Option(False, "--full"),
     incremental: bool = typer.Option(False, "--incremental"),
     root: Path = typer.Option(Path.cwd(), "--root", exists=True, file_okay=False, dir_okay=True),
+    config_path: Path = typer.Option(Path("configs/indexer.yaml"), "--config", exists=True),
 ) -> None:
     """Run the repository indexer."""
-    config = IndexJobConfig(root=root, full=full, incremental=incremental)
-    service = IndexerService()
-    service.run(config)
+    job = IndexJobConfig(root=root, full=full, incremental=incremental)
+    config = load_indexer_config(Path.cwd(), config_path)
+    parser = TreeSitterParser(config)
+    graph_store = GraphStore(config.database_url)
+    embedding_store = EmbeddingStore(enabled=config.embeddings_enabled, model=config.embedding_model)
+    service = IndexerService(config=config, graph_store=graph_store, parser=parser, embedding_store=embedding_store)
+    service.run(job)
     typer.echo("Indexing complete")
 
 

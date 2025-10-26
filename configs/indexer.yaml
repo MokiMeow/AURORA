@@ -1,0 +1,9 @@
+root: examples/sample_repo
+languages_path: configs/languages.yaml
+database_url: sqlite:///artifacts/index.db
+embeddings_enabled: true
+embedding_model: hash32
+milvus_enabled: false
+include_tests: true
+include_docs: true
+

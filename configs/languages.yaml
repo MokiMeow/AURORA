@@ -3,14 +3,23 @@ languages:
     tree_sitter: python
     file_extensions: [".py"]
     incremental: true
+    queries:
+      symbols: queries/python-symbols.scm
+      imports: queries/python-imports.scm
   - name: typescript
     tree_sitter: typescript
     file_extensions: [".ts", ".tsx"]
     incremental: true
+    queries:
+      symbols: queries/typescript-symbols.scm
+      imports: queries/typescript-imports.scm
   - name: javascript
     tree_sitter: javascript
     file_extensions: [".js", ".jsx"]
     incremental: true
+    queries:
+      symbols: queries/javascript-symbols.scm
+      imports: queries/javascript-imports.scm
   - name: markdown
     tree_sitter: markdown
     file_extensions: [".md"]

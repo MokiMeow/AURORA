@@ -1,16 +1,22 @@
-"""Indexing service responsible for building the repo intelligence layer."""
+"""Production-ready indexing service coordinating repo intelligence."""
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from .config import IndexerConfig
+from .embedding import EmbeddingStore
+from .store import GraphStore
+from .tree import TreeSitterParser
+
+LOGGER = logging.getLogger(__name__)
+
 
 @dataclass(slots=True)
 class IndexJobConfig:
-    """Configuration for a repository indexing job."""
-
     root: Path
     full: bool = False
     incremental: bool = False
@@ -25,30 +31,54 @@ class IndexJobConfig:
 
 
 class IndexerService:
-    """High-level interface for coordinating indexing subsystems."""
-
-    def __init__(self, observers: Iterable[object] | None = None) -> None:
+    def __init__(
+        self,
+        config: IndexerConfig,
+        graph_store: GraphStore,
+        parser: TreeSitterParser,
+        embedding_store: EmbeddingStore,
+        observers: Iterable[object] | None = None,
+    ) -> None:
+        self._config = config
+        self._graph_store = graph_store
+        self._parser = parser
+        self._embedding_store = embedding_store
         self._observers = list(observers or [])
 
-    def run(self, config: IndexJobConfig) -> None:
-        config.validate()
-        self._notify("start", config)
+    def run(self, job: IndexJobConfig) -> None:
+        job.validate()
+        self._notify("start", job)
+        LOGGER.info(
+            "Starting index job",
+            extra={"root": str(job.root), "full": job.full, "incremental": job.incremental},
+        )
         try:
-            # Placeholder for actual tree-sitter, graph, embedding orchestration.
-            self._perform_index(config)
-        except Exception as exc:  # pragma: no cover - structured handling later
-            self._notify("error", config, exc)
+            self._perform_index(job)
+        except Exception as exc:  # pragma: no cover
+            self._notify("error", job, exc)
+            LOGGER.exception("Index job failed: %s", exc)
             raise
         else:
-            self._notify("complete", config)
+            self._notify("complete", job)
+            LOGGER.info("Index job completed", extra={"root": str(job.root)})
 
-    def _perform_index(self, config: IndexJobConfig) -> None:
-        # TODO: Implement orchestration once subsystems are available.
-        return None
+    def _perform_index(self, job: IndexJobConfig) -> None:
+        sources = self._parser.scan_repository(self._config.root)
+        parsed_units = list(self._parser.parse_sources(sources))
+        changed_paths = self._graph_store.store_units(parsed_units, full=job.full)
+        if not changed_paths:
+            LOGGER.info("No changes detected; skipping embedding indexing")
+            return
+        embeddings = [
+            self._embedding_store.embed_content(str(unit.path), unit.content)
+            for unit in parsed_units
+            if str(unit.path) in changed_paths
+        ]
+        self._embedding_store.index(embeddings)
 
-    def _notify(self, event: str, config: IndexJobConfig, error: Exception | None = None) -> None:
+    def _notify(self, event: str, job: IndexJobConfig, error: Exception | None = None) -> None:
         for observer in self._observers:
             handler = getattr(observer, "on_index_event", None)
             if callable(handler):
-                handler(event=event, config=config, error=error)
+                handler(event=event, job=job, error=error)
 
