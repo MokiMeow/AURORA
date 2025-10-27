@@ -1,0 +1,9 @@
+swe-bench-lite:
+  command: ["python", "run.py"]
+  dataset: datasets/swe-bench-lite
+  artifacts: artifacts/eval
+swe-bench-live:
+  command: ["python", "run_live.py"]
+  dataset: datasets/swe-bench-live
+  artifacts: artifacts/eval
+

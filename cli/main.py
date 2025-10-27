@@ -20,6 +20,8 @@ from aurora.executor import ExecutorService, CIOrchestrator, LocalSandbox
 from aurora.security.secrets import SecretScanner, SecretScannerConfig
 from aurora.learn.config import TrainingConfig, HardwareConfig
 from aurora.learn.service import LearningService
+from aurora.eval.config_loader import load_evaluation_config
+from aurora.eval.service import EvaluationService
 from aurora.indexer.context import ContextPacker
 
 
@@ -118,6 +120,19 @@ def learn(
     service = LearningService(config)
     service.run(nightly=nightly)
     typer.echo("Learning pipeline triggered")
+
+
+@app.command()
+def eval(
+    suite: str = typer.Option("swe-bench-lite", "--suite"),
+    config_path: Path = typer.Option(Path("configs/eval.yaml"), "--config", exists=True),
+) -> None:
+    """Run evaluation suite (SWE-Bench)."""
+
+    config = load_evaluation_config(config_path)
+    service = EvaluationService(config)
+    result = service.run(suite_name=suite)
+    typer.echo(f"Evaluation completed with exit code {result.exit_code}; results at {result.output_path}")
 
 
 def entrypoint() -> None:
