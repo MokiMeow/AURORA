@@ -20,4 +20,7 @@ secret_redaction:
   patterns:
     - (?i)api[_-]?key[:=]\s*[A-Za-z0-9]{32,}
     - (?i)secret[:=]\s*[A-Za-z0-9+/]{24,}
+experience:
+  path: experience/log.jsonl
+  limit: 5
 

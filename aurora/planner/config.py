@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Sequence
+from pathlib import Path
 
 
 @dataclass(slots=True)
@@ -35,9 +36,16 @@ class ModelConfig:
 
 
 @dataclass(slots=True)
+class ExperienceConfig:
+    path: Path
+    limit: int = 5
+
+
+@dataclass(slots=True)
 class PlannerConfig:
     primary: ModelConfig
     critics: tuple[CriticConfig, ...]
     retry_policy: RetryPolicy
     secret_redaction: SecretRedaction
+    experience_config: ExperienceConfig | None = None
 

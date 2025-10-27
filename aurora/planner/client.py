@@ -36,19 +36,18 @@ class PlannerClient:
             else None
         )
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_fixed(5),
-        reraise=True,
-    )
     async def generate(self, prompt: str) -> PlannerResponse:
         payload = {
             "model": self._config.primary.model,
             "prompt": prompt,
-            "stream": False,
+            "options": {"stream": True},
         }
         async with httpx.AsyncClient(timeout=self._config.primary.timeout_seconds) as client:
-            response = await client.post(self._config.primary.endpoint, json=payload)
+            for attempt in range(self._config.retry_policy.max_attempts):
+                response = await client.post(self._config.primary.endpoint, json=payload)
+                if response.status_code < 500:
+                    break
+                await asyncio.sleep(self._config.retry_policy.backoff_seconds)
         response.raise_for_status()
         data = response.json()
         content = data.get("response") or data.get("output")

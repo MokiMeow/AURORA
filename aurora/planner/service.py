@@ -36,7 +36,9 @@ class PlannerService:
         self._config_path = config_path
         self._graph_store = graph_store
         self._embedding_store = embedding_store
-        self._experience_vault = experience_vault
+        self._experience_vault = experience_vault or ExperienceVault(
+            self._config.experience_config.path if self._config.experience_config else None
+        )
         self._config = load_planner_config(config_path)
         self._client = PlannerClient(self._config)
         self._context_packer = build_context_packer(
@@ -51,7 +53,16 @@ class PlannerService:
     async def generate_self_edit(self, task: str, auto: bool, critic: bool) -> SelfEdit:
         PDCAEntry(phase="Plan", event="start", payload={"task": task, "auto": auto, "critic": critic}).write()
         context_slices = self._context_packer.build_context(task)
+        experience_slices = []
+        if self._config.experience_config:
+            matches = self._experience_vault.search(task, limit=self._config.experience_config.limit)
+            experience_slices = [
+                f"Experience match reward={match.reward}: {match.edit.get('summary', '')}"
+                for match in matches
+            ]
         context_payload = "\n".join(f"- {slice_.summary} ({slice_.path})" for slice_ in context_slices)
+        if experience_slices:
+            context_payload += "\n" + "\n".join(f"- {line}" for line in experience_slices)
         prompt = self._build_prompt(task, context_payload, auto=auto)
         try:
             response = await self._client.generate(prompt)
@@ -98,9 +109,16 @@ class PlannerService:
     async def _run_critics(self, self_edit: SelfEdit) -> None:
         payload = json.loads(self_edit.model_dump_json(indent=2))
         results = await self._client.run_critics(payload)
+        processed = []
+        for result in results:
+            processed.append({
+                "critic": result["critic"],
+                "status": result["response"].get("status", "unknown"),
+                "policy_notes": result["response"].get("policy_notes", []),
+            })
         artifact_path = ARTIFACTS_DIR / "critic_outputs.json"
-        artifact_path.write_text(json.dumps(results, indent=2))
-        PDCAEntry(phase="Plan", event="critic", payload={"results": [r["critic"] for r in results]}).write()
+        artifact_path.write_text(json.dumps(processed, indent=2))
+        PDCAEntry(phase="Plan", event="critic", payload={"results": processed}).write()
 
     @staticmethod
     def _write_artifact(filename: str, content: str) -> None:

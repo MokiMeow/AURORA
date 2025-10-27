@@ -35,3 +35,13 @@ class ExperienceVault:
             records.append(ExperienceRecord(**data))
         return records
 
+    def search(self, query: str, limit: int = 5) -> list[ExperienceRecord]:
+        results: list[ExperienceRecord] = []
+        for record in self.iter_records():
+            content = json.dumps(record.context) + json.dumps(record.edit)
+            if query.lower() in content.lower():
+                results.append(record)
+            if len(results) >= limit:
+                break
+        return results
+

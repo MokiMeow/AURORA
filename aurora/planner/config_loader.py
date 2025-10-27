@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from .config import CriticConfig, ModelConfig, PlannerConfig, RetryPolicy, SecretRedaction
+from .config import CriticConfig, ModelConfig, PlannerConfig, RetryPolicy, SecretRedaction, ExperienceConfig
 
 
 def load_planner_config(path: Path) -> PlannerConfig:
@@ -35,10 +35,17 @@ def load_planner_config(path: Path) -> PlannerConfig:
         enabled=redaction_cfg.get("enabled", False),
         patterns=tuple(redaction_cfg.get("patterns", [])),
     )
+    experience = None
+    if "experience" in data:
+        experience = ExperienceConfig(
+            path=Path(data["experience"]["path"]),
+            limit=data["experience"].get("limit", 5),
+        )
     return PlannerConfig(
         primary=primary,
         critics=critics,
         retry_policy=retry_policy,
         secret_redaction=redaction,
+        experience_config=experience,
     )
 
