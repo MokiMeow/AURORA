@@ -1,9 +1,15 @@
-swe-bench-lite:
-  command: ["python", "run.py"]
-  dataset: datasets/swe-bench-lite
+results_dir: eval/results
+defaults:
   artifacts: artifacts/eval
-swe-bench-live:
-  command: ["python", "run_live.py"]
-  dataset: datasets/swe-bench-live
-  artifacts: artifacts/eval
+  profile: balanced
+  timeout_minutes: 180
+suites:
+  swe-bench-lite:
+    command: ["python", "run.py"]
+    dataset: datasets/swe-bench-lite
+    schedule: nightly
+  swe-bench-live:
+    command: ["python", "run_live.py"]
+    dataset: datasets/swe-bench-live
+    schedule: weekly
 

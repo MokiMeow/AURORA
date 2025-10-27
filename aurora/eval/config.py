@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
+from typing import Dict, Sequence
 
 
 @dataclass(slots=True)
@@ -13,9 +13,13 @@ class SuiteConfig:
     command: list[str]
     dataset_path: Path
     artifacts_dir: Path
+    schedule: str
+    profile: str
+    timeout_minutes: int
 
 
 @dataclass(slots=True)
 class EvaluationConfig:
-    suites: dict[str, SuiteConfig]
+    suites: Dict[str, SuiteConfig]
+    results_dir: Path
 

@@ -160,13 +160,24 @@ def adapters(command: str = typer.Argument(...), path: Path = typer.Option(Path(
 def eval(
     suite: str = typer.Option("swe-bench-lite", "--suite"),
     config_path: Path = typer.Option(Path("configs/eval.yaml"), "--config", exists=True),
+    export_metrics: bool = typer.Option(True, "--export-metrics/--no-export-metrics"),
 ) -> None:
     """Run evaluation suite (SWE-Bench)."""
 
     config = load_evaluation_config(config_path)
     service = EvaluationService(config)
     result = service.run(suite_name=suite)
-    typer.echo(f"Evaluation completed with exit code {result.exit_code}; results at {result.output_path}")
+    typer.echo(
+        "Evaluation completed with exit code "
+        f"{result.exit_code}; results at {result.output_path}"
+    )
+    if export_metrics:
+        typer.echo(f"Metrics saved to {result.metrics_path}")
+        typer.echo(f"Compliance report saved to {result.compliance_path}")
+        if result.sbom_path:
+            typer.echo(f"SBOM snapshot at {result.sbom_path}")
+        if result.telemetry_path:
+            typer.echo(f"Telemetry snapshot at {result.telemetry_path}")
 
 
 def entrypoint() -> None:
