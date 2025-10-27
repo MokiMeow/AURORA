@@ -18,6 +18,8 @@ from aurora.planner.config_loader import load_planner_config
 from aurora.executor.config_loader import load_executor_config
 from aurora.executor import ExecutorService, CIOrchestrator, LocalSandbox
 from aurora.security.secrets import SecretScanner, SecretScannerConfig
+from aurora.learn.config import TrainingConfig, HardwareConfig
+from aurora.learn.service import LearningService
 from aurora.indexer.context import ContextPacker
 
 
@@ -97,6 +99,25 @@ def apply(
     executor = ExecutorService(config=config, ci_orchestrator=ci_orchestrator, secret_scanner=secret_scanner)
     executor.apply(edit_path=edit, profile=profile)
     typer.echo("Executor run completed")
+
+
+@app.command()
+def learn(
+    nightly: bool = typer.Option(False, "--nightly"),
+    gpu: str = typer.Option("auto", "--gpu"),
+) -> None:
+    """Run adapter learning pipeline."""
+
+    config = TrainingConfig(
+        adapters_path=Path("adapters"),
+        data_path=Path("artifacts"),
+        base_model="base-model",
+        output_adapter=Path("adapters") / "default" / "latest",
+        hardware=HardwareConfig(gpu_memory_gb=24, fallback_mode="cpu", precision="8bit"),
+    )
+    service = LearningService(config)
+    service.run(nightly=nightly)
+    typer.echo("Learning pipeline triggered")
 
 
 def entrypoint() -> None:
