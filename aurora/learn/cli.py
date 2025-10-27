@@ -28,7 +28,7 @@ def sync_adapter(root: Path, name: str, version: str, config_path: Path) -> dict
         phase="Learn",
         event="cli_sync",
         payload={"adapter": version, "peer": config.peer},
-    ).write()
+    )
     return matching.metadata
 
 
@@ -40,6 +40,6 @@ def rollback_adapter(root: Path, name: str, version: str) -> Path:
         phase="Learn",
         event="cli_rollback",
         payload={"adapter": version, "name": name},
-    ).write()
+    )
     return path
 

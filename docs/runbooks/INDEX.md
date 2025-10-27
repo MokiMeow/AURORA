@@ -6,4 +6,6 @@
 - Reward Calibration
 - Learning Loop Maintenance
 - Governance Reviews
+- Observability & Telemetry Operations
+- Compliance Bundle Procedures
 

@@ -49,7 +49,7 @@ class ExecutorService:
         if not edit_path.exists():
             raise FileNotFoundError(f"Edit file {edit_path} does not exist")
         self_edit = SelfEdit.model_validate_json(edit_path.read_text(encoding="utf-8"))
-        PDCAEntry(phase="Do", event="start", payload={"intent": self_edit.intent, "profile": profile}).write()
+        PDCAEntry(phase="Do", event="start", payload={"intent": self_edit.intent, "profile": profile})
         try:
             self._apply_patches(self_edit.patches)
             self._scan_for_secrets()
@@ -57,11 +57,15 @@ class ExecutorService:
         except PatchApplicationError as exc:
             self._fatal_failures += 1
             self._log_error("fatal", str(exc))
-            PDCAEntry(phase="Do", event="failure", payload={"type": "fatal", "error": str(exc)}).write()
+            PDCAEntry(phase="Do", event="failure", payload={"type": "fatal", "error": str(exc)})
             raise
-        except Exception as exc:
-            self._log_error("retryable", str(exc))
-            PDCAEntry(phase="Do", event="failure", payload={"type": "retryable", "error": str(exc)}).write()
+        except Exception as exc:  # pragma: no cover - safety net
+            self._fatal_failures += 1
+            PDCAEntry(
+                phase="Act",
+                event="failure",
+                payload={"error": str(exc), "fatal_failures": self._fatal_failures},
+            )
             raise
         summary = diff_summary(self._config.workspace)
         ci_payload = [
@@ -72,16 +76,16 @@ class ExecutorService:
             phase="Check",
             event="ci_results",
             payload={"profile": profile, "results": ci_payload, "diff": summary},
-        ).write()
+        )
         policy_result = self._policy_evaluator.evaluate(ci_payload)
         if not policy_result.accepted:
-            PDCAEntry(phase="Act", event="policy_reject", payload={"reasons": policy_result.reasons}).write()
+            PDCAEntry(phase="Act", event="policy_reject", payload={"reasons": policy_result.reasons})
             self._fatal_failures += 1
             self._log_error("fatal", "Policy failure: " + "; ".join(policy_result.reasons))
             raise RuntimeError("Policy evaluation failed: " + "; ".join(policy_result.reasons))
         summary_path = self._config.artifacts_dir / "executor_summary.json"
         summary_path.write_text(json.dumps({"ci_results": ci_payload, "policy": policy_result.reasons}, indent=2))
-        PDCAEntry(phase="Act", event="completed", payload={"profile": profile}).write()
+        PDCAEntry(phase="Act", event="completed", payload={"profile": profile})
 
     def _apply_patches(self, patches: Iterable[dict]) -> None:
         for patch in patches:

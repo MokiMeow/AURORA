@@ -27,6 +27,7 @@ from aurora.eval.config_loader import load_evaluation_config
 from aurora.eval.service import EvaluationService
 from aurora.indexer.context import ContextPacker
 from aurora.learn.cli import list_adapters, sync_adapter, rollback_adapter
+from aurora.telemetry.service import TelemetryService
 
 
 app = typer.Typer(help="AURORA-SE command-line interface")
@@ -178,6 +179,39 @@ def eval(
             typer.echo(f"SBOM snapshot at {result.sbom_path}")
         if result.telemetry_path:
             typer.echo(f"Telemetry snapshot at {result.telemetry_path}")
+
+
+@app.command()
+def telemetry(
+    config_path: Path = typer.Option(Path("configs/telemetry.yaml"), "--config", exists=True),
+    export: bool = typer.Option(False, "--export", help="Export PDCA log to stdout"),
+) -> None:
+    """Initialize telemetry stack or export PDCA log."""
+
+    service = TelemetryService.from_config(config_path)
+    if export:
+        pdca_log = service.config.log_file
+        if pdca_log.exists():
+            typer.echo(pdca_log.read_text(encoding="utf-8"))
+        else:
+            typer.echo("PDCA log is empty")
+    else:
+        typer.echo("Telemetry stack initialized")
+
+
+@app.command()
+def governance(
+    command: str = typer.Argument(..., metavar="COMMAND"),
+    bundle_path: Path = typer.Option(Path("docs/governance/bundles/latest.json"), "--bundle"),
+) -> None:
+    """Governance utilities (bundle generation, policy checks)."""
+
+    if command == "bundle":
+        typer.echo(f"Latest governance bundle at {bundle_path}")
+    elif command == "policy":
+        typer.echo("Policy checks not yet implemented")
+    else:
+        raise typer.BadParameter("Unsupported governance command")
 
 
 def entrypoint() -> None:

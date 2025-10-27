@@ -5,6 +5,7 @@ otel:
 
 prometheus:
   scrape_interval: 15s
+  port: 9464
   targets:
     - http://localhost:9464/metrics
 

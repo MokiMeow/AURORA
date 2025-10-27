@@ -14,11 +14,12 @@ class GovernanceBundle:
     payload: dict[str, Any]
 
 
-def assemble_bundle(output_path: Path, evaluation_report: dict[str, Any]) -> GovernanceBundle:
+def assemble_bundle(output_path: Path, evaluation_report: dict[str, Any], overrides: list[dict] | None = None) -> GovernanceBundle:
     bundle_dir = output_path.parent
     bundle_dir.mkdir(parents=True, exist_ok=True)
     payload = {
         "evaluation": evaluation_report,
+        "policy_overrides": overrides or [],
     }
     output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return GovernanceBundle(output_path=output_path, payload=payload)

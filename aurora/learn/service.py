@@ -39,11 +39,11 @@ class LearningService:
                 "domain": self._config.domain,
                 "epochs": self._config.epochs,
             },
-        ).write()
+        )
         hardware = self._hardware_detector.detect()
         LOGGER.info("Using hardware: %s", hardware)
         self._config.output_adapter.parent.mkdir(parents=True, exist_ok=True)
-        PDCAEntry(phase="Learn", event="hardware", payload=hardware).write()
+        PDCAEntry(phase="Learn", event="hardware", payload=hardware)
         pipeline = SFTPipeline(
             data_path=self._config.data_path,
             base_model=self._config.base_model,
@@ -96,7 +96,7 @@ class LearningService:
                     "threshold": self._config.bias_threshold,
                     "adapter": adapter_info.version,
                 },
-            ).write()
+            )
         if federated:
             if not self._config.federation_config:
                 raise ValueError("Federated sync requested but no federation config provided")
@@ -106,7 +106,7 @@ class LearningService:
                 phase="Learn",
                 event="federated_sync",
                 payload={"peer": federation_config.peer, "adapter": adapter_info.version},
-            ).write()
+            )
         PDCAEntry(
             phase="Learn",
             event="complete",
@@ -115,7 +115,7 @@ class LearningService:
                 "bias_score": result.bias_score,
                 "metrics": result.training_metrics,
             },
-        ).write()
+        )
 
     def _write_bias_report(self, metrics: dict[str, Any], bias_score: float) -> None:
         report_path = self._config.bias_report_path

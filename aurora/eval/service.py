@@ -13,6 +13,8 @@ from typing import Any, Optional
 from ..planner.pdca import PDCAEntry
 from .config import EvaluationConfig, SuiteConfig
 from .analytics import generate_dashboard, export_metrics_csv, diff_sbom
+from ..governance.bundle import assemble_bundle
+from ..governance.compliance import CompliancePolicy
 
 LOGGER = logging.getLogger(__name__)
 
@@ -31,6 +33,7 @@ class EvaluationResult:
 class EvaluationService:
     def __init__(self, config: EvaluationConfig) -> None:
         self._config = config
+        self._compliance_policy = CompliancePolicy(max_bias_score=0.2)
 
     def run(self, suite_name: str) -> EvaluationResult:
         if suite_name not in self._config.suites:
@@ -43,7 +46,7 @@ class EvaluationService:
             phase="Check",
             event="evaluation_start",
             payload={"suite": suite_name, "schedule": suite.schedule, "profile": suite.profile, "run_id": run_id},
-        ).write()
+        )
         result_path = suite.artifacts_dir / f"{suite_name}_{run_id}_raw.json"
         metrics_path = self._config.results_dir / f"{suite_name}_{run_id}_metrics.json"
         compliance_path = suite.artifacts_dir / f"{suite_name}_{run_id}_compliance.json"
@@ -72,6 +75,7 @@ class EvaluationService:
         export_metrics_csv(self._config.results_dir, self._config.results_dir / "metrics.csv")
         generate_dashboard(self._config.results_dir, Path("docs/reports/weekly_dashboard.html"))
         self._diff_sbom(suite, sbom_path)
+        issues = self._evaluate_compliance(compliance_report)
         PDCAEntry(
             phase="Check",
             event="evaluation_complete",
@@ -84,9 +88,10 @@ class EvaluationService:
                 "planner_version": self._planner_version(),
                 "executor_version": self._executor_version(),
                 "reward_stats": self._reward_snapshot(),
+                "compliance_issues": issues,
             },
-        ).write()
-        self._publish_governance_bundle(suite, compliance_report)
+        )
+        self._publish_governance_bundle(suite, compliance_report, issues)
         return EvaluationResult(
             suite=suite_name,
             exit_code=process.returncode,
@@ -171,9 +176,15 @@ class EvaluationService:
                 return {}
         return {}
 
-    def _publish_governance_bundle(self, suite: SuiteConfig, report: dict[str, Any]) -> None:
-        from ..governance.bundle import assemble_bundle
+    def _evaluate_compliance(self, report: dict[str, Any]) -> list[str]:
+        """
+        Placeholder for compliance policy evaluation logic.
+        In a real scenario, this would involve loading policies,
+        comparing metrics, and identifying deviations.
+        """
+        return self._compliance_policy.evaluate(report)
 
+    def _publish_governance_bundle(self, suite: SuiteConfig, report: dict[str, Any], issues: list[str]) -> None:
         bundle_path = Path("docs/governance/bundles") / f"{suite.name}_latest.json"
-        assemble_bundle(bundle_path, report)
+        assemble_bundle(bundle_path, report, overrides=[{"issues": issues}] if issues else None)
 

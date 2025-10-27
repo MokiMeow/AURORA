@@ -2,27 +2,14 @@
 
 from __future__ import annotations
 
-import json
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+
+from aurora.telemetry.pdca import PDCAEntry as TelemetryPDCAEntry
 
 PDCA_LOG = Path("telemetry/pdca.jsonl")
-PDCA_LOG.parent.mkdir(parents=True, exist_ok=True)
 
 
-@dataclass(slots=True)
-class PDCAEntry:
-    phase: str
-    event: str
-    payload: dict[str, Any]
-
-    def write(self) -> None:
-        record = {
-            "phase": self.phase,
-            "event": self.event,
-            "payload": self.payload,
-        }
-        with PDCA_LOG.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(record) + "\n")
+def PDCAEntry(phase: str, event: str, payload: dict) -> None:
+    """Proxy to telemetry PDCA writer for backward compatibility."""
+    TelemetryPDCAEntry(phase=phase, event=event, payload=payload)
 

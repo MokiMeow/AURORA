@@ -12,6 +12,9 @@ from .calculator import RewardCalculator, RewardInputs
 from .adaptive import AdaptiveScheduler
 from .experience import ExperienceLogger, ExperienceRecord
 from .policy import RewardPolicy
+from ..telemetry.pdca import PDCAEntry
+from ..telemetry.metrics import MetricsEmitter
+from ..telemetry.errors import ErrorLogger
 
 
 @dataclass(slots=True)
@@ -31,6 +34,8 @@ class RewardEngine:
         experience_logger: ExperienceLogger,
         log_path: Path,
         policy: RewardPolicy,
+        metrics_emitter: MetricsEmitter | None = None,
+        error_logger: ErrorLogger | None = None,
     ) -> None:
         self._collector = collector
         self._calculator = calculator
@@ -39,6 +44,8 @@ class RewardEngine:
         self._history_path = log_path
         self._history_path.parent.mkdir(parents=True, exist_ok=True)
         self._policy = policy
+        self._metrics = metrics_emitter or MetricsEmitter()
+        self._errors = error_logger or ErrorLogger(Path("telemetry/errors.jsonl"))
 
     def compute_reward(self, ci_results: List[dict]) -> RewardResult:
         snapshot = self._collector.from_ci_results(ci_results)
@@ -67,9 +74,21 @@ class RewardEngine:
                 regret=not success,
             )
         )
+        self._metrics.record_reward(metrics_dict.get("suite", "ci"), reward)
+        PDCAEntry(
+            phase="Check",
+            event="reward_calculated",
+            payload={
+                "reward": reward,
+                "success": success,
+                "metrics": metrics_dict,
+                "reasons": policy_result.reasons,
+            },
+        )
         return RewardResult(reward=reward, metrics=metrics_dict, success=success, reasons=policy_result.reasons)
 
     def _append_history(self, record: dict) -> None:
         with self._history_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(record) + "\n")
+
 

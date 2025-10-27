@@ -43,7 +43,8 @@ dependencies = [
   "docker>=7.1",
   "semver>=3.0",
   "tenacity>=8.3",
-  "neo4j>=5.17"
+  "neo4j>=5.17",
+  "prometheus-client>=0.20"
 ]
 
 [tool.hatch.build.targets.wheel]
