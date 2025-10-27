@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Iterable, List, Dict
 
 
 @dataclass(slots=True)
@@ -30,4 +30,23 @@ class MetricCollector:
 
     def history(self) -> Iterable[MetricSnapshot]:
         return tuple(self._history)
+
+    def from_ci_results(self, results: List[Dict[str, object]]) -> MetricSnapshot:
+        tests_passed = sum(1 for r in results if r["success"] and "test" in r["step"])
+        coverage_delta = 0.1 if any("coverage" in r["step"] and r["success"] for r in results) else 0.0
+        perf_delta = 0.1 if any("perf" in r["step"] or "k6" in r["step"] for r in results if r["success"]) else 0.0
+        security_failures = [r for r in results if not r["success"] and any(keyword in r["step"] for keyword in {"security", "cve", "sbom", "license", "bandit", "semgrep"})]
+        security_score = 1.0 if not security_failures else 0.0
+        complexity_delta = 0.0
+        policy_bonus = 0.1 if all(r["success"] for r in results) else 0.0
+        snapshot = MetricSnapshot(
+            tests_passed=float(tests_passed),
+            coverage_delta=coverage_delta,
+            perf_delta=perf_delta,
+            security_score=security_score,
+            complexity_delta=complexity_delta,
+            policy_bonus=policy_bonus,
+        )
+        self.record(snapshot)
+        return snapshot
 

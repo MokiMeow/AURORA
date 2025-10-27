@@ -4,6 +4,7 @@ from .calculator import RewardCalculator, RewardInputs, RewardWeights
 from .collectors import MetricCollector, MetricSnapshot
 from .adaptive import AdaptiveScheduler, AdaptiveWeights
 from .experience import ExperienceLogger, ExperienceRecord
+from .engine import RewardEngine
 
 __all__ = [
     "RewardCalculator",
@@ -15,5 +16,6 @@ __all__ = [
     "AdaptiveWeights",
     "ExperienceLogger",
     "ExperienceRecord",
+    "RewardEngine",
 ]
 
