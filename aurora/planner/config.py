@@ -42,6 +42,45 @@ class ExperienceConfig:
 
 
 @dataclass(slots=True)
+class ModelRoute:
+    name: str
+    provider: str
+    endpoint: str
+    model: str
+    timeout_seconds: float
+    api_key_env: str | None = None
+    max_output_tokens: int | None = None
+    keywords: tuple[str, ...] = ()
+    capabilities: tuple[str, ...] = ()
+    extra: dict[str, Any] | None = None
+
+    def __post_init__(self) -> None:
+        if self.extra is None:
+            self.extra = {}
+
+
+@dataclass(slots=True)
+class RoutingRule:
+    name: str
+    route: str
+    keywords: tuple[str, ...] = ()
+    auto_only: bool = False
+
+
+@dataclass(slots=True)
+class RoutingStrategy:
+    default_route: str
+    rules: tuple[RoutingRule, ...] = ()
+
+
+@dataclass(slots=True)
+class CriticStrategy:
+    mode: str = "all"
+    threshold: int | None = None
+    priority: tuple[str, ...] = ()
+
+
+@dataclass(slots=True)
 class PlannerConfig:
     primary: ModelConfig
     critics: tuple[CriticConfig, ...]
@@ -50,4 +89,7 @@ class PlannerConfig:
     experience_config: ExperienceConfig | None = None
     swe_telemetry_path: Path | None = None
     policy_notes: tuple[dict[str, Any], ...] = ()
+    routes: tuple[ModelRoute, ...] = ()
+    routing: RoutingStrategy | None = None
+    critic_strategy: CriticStrategy = CriticStrategy()
 

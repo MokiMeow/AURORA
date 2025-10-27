@@ -16,6 +16,9 @@ This document tracks follow-up items discovered during Phase 0 and Phase 1. Each
 - [x] Integrate composite secret scanning (regex + TruffleHog/GitLeaks) with allow-lists.
 - [x] Expand security policy DSL with license allow-list, SBOM/CVE gating, and CI enforcement.
 - [x] Emit SBOM/CVE/license artifacts during CI and feed them into governance bundles.
+- [x] Implement planner routing engine with provider selection and session capture.
+- [x] Add critic consensus strategy and streaming support for planner client.
+
 
 ## In Progress / Planned
 

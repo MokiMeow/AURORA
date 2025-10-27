@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ from ..indexer.store import GraphStore
 from ..indexer.embedding import EmbeddingStore
 from .client import PlannerClient
 from .config_loader import load_planner_config
+from .router import PlannerRouter
 from .schema import SelfEdit
 from .pdca import PDCAEntry
 
@@ -40,6 +42,7 @@ class PlannerService:
             self._config.experience_config.path if self._config.experience_config else None
         )
         self._client = PlannerClient(self._config)
+        self._router = PlannerRouter(self._config)
         self._context_packer = build_context_packer(
             graph_store=graph_store,
             embedding_store=embedding_store,
@@ -63,18 +66,60 @@ class PlannerService:
         if experience_slices:
             context_payload += "\n" + "\n".join(f"- {line}" for line in experience_slices)
         prompt = self._build_prompt(task, context_payload, auto=auto)
+        summaries = [slice_.summary for slice_ in context_slices]
+        route = self._router.select_route(task, summaries, auto)
+        PDCAEntry(
+            phase="Plan",
+            event="route_selected",
+            payload={"task": task, "route": route.name, "provider": route.provider},
+        )
+        sanitised_context = []
+        for summary in summaries[:5]:
+            cleaned, _ = self._client.redact_text(summary)
+            sanitised_context.append(cleaned)
+        metadata = {
+            "auto": auto,
+            "context": sanitised_context,
+        }
         try:
-            response = await self._client.generate(prompt)
+            response = await self._client.generate(prompt, route=route, metadata=metadata)
         except Exception as exc:  # pragma: no cover
-            PDCAEntry(phase="Plan", event="error", payload={"task": task, "error": str(exc)})
+            PDCAEntry(
+                phase="Plan",
+                event="error",
+                payload={"task": task, "error": str(exc), "route": route.name},
+            )
             raise
+        sanitized_prompt, _ = self._client.redact_text(prompt)
         self._write_artifact("planner_output.txt", response.content)
         data = self._parse_response(response.content)
         self_edit = self._validate_self_edit(data)
+        critic_outcome = None
         if critic:
-            await self._run_critics(self_edit)
+            critic_outcome = await self._run_critics(self_edit)
+            if not critic_outcome.accepted:
+                raise RuntimeError("Critic consensus rejected self-edit: " + "; ".join(critic_outcome.reasons))
         self._write_artifact("self_edit.json", self_edit.model_dump_json(indent=2))
-        PDCAEntry(phase="Plan", event="complete", payload={"task": task, "redacted": response.redacted})
+        PDCAEntry(
+            phase="Plan",
+            event="complete",
+            payload={
+                "task": task,
+                "redacted": response.redacted,
+                "route": route.name,
+                "provider": route.provider,
+            },
+        )
+        self._persist_session(
+            task=task,
+            auto=auto,
+            route=route,
+            prompt=sanitized_prompt,
+            response=response.content,
+            context=context_slices,
+            experience=experience_slices,
+            critic_outcome=critic_outcome,
+        )
         return self_edit
 
     def _build_prompt(self, task: str, context: str, auto: bool) -> str:
@@ -105,22 +150,62 @@ class PlannerService:
             raise
         return self_edit
 
-    async def _run_critics(self, self_edit: SelfEdit) -> None:
+    async def _run_critics(self, self_edit: SelfEdit):
         payload = json.loads(self_edit.model_dump_json(indent=2))
-        results = await self._client.run_critics(payload)
+        outcome = await self._client.run_critics(payload)
         processed = []
-        for result in results:
-            processed.append({
-                "critic": result["critic"],
-                "status": result["response"].get("status", "unknown"),
-                "policy_notes": result["response"].get("policy_notes", []),
-            })
+        for result in outcome.results:
+            processed.append(
+                {
+                    "critic": result["critic"],
+                    "status": str(result["response"].get("status", "unknown")),
+                    "policy_notes": result["response"].get("policy_notes", []),
+                }
+            )
         artifact_path = ARTIFACTS_DIR / "critic_outputs.json"
         artifact_path.write_text(json.dumps(processed, indent=2))
-        PDCAEntry(phase="Plan", event="critic", payload={"results": processed})
+        PDCAEntry(
+            phase="Plan",
+            event="critic",
+            payload={"results": processed, "accepted": outcome.accepted, "reasons": outcome.reasons},
+        )
+        return outcome
 
     @staticmethod
     def _write_artifact(filename: str, content: str) -> None:
         path = ARTIFACTS_DIR / filename
         path.write_text(content)
+
+    def _persist_session(
+        self,
+        task: str,
+        auto: bool,
+        route,
+        prompt: str,
+        response: str,
+        context,
+        experience,
+        critic_outcome,
+    ) -> None:
+        session_dir = ARTIFACTS_DIR / "planner_sessions"
+        session_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+        session = {
+            "task": task,
+            "auto": auto,
+            "timestamp": timestamp,
+            "route": {"name": route.name, "provider": route.provider},
+            "prompt": prompt,
+            "response": response,
+            "context": [slice_.summary for slice_ in context],
+            "experience": experience,
+        }
+        if critic_outcome:
+            session["critic"] = {
+                "accepted": critic_outcome.accepted,
+                "reasons": critic_outcome.reasons,
+                "results": critic_outcome.results,
+            }
+        session_path = session_dir / f"{timestamp}_{route.name}.json"
+        session_path.write_text(json.dumps(session, indent=2))
 

@@ -21,7 +21,7 @@ Trust boundaries exist between:
 
 ### Spoofing
 - **Risk:** Unauthenticated remote services impersonating model endpoints.
-- **Mitigation:** TLS endpoints with pinned URLs in `configs/model.yaml`; future work includes token validation and mTLS for self-hosted models.
+- **Mitigation:** TLS endpoints with pinned URLs in `configs/model.yaml`; API keys sourced from dedicated env vars per route; future work includes token validation and mTLS for self-hosted models.
 
 ### Tampering
 - **Risk:** Malicious patches altering repository state outside PDCA flow.
@@ -33,7 +33,7 @@ Trust boundaries exist between:
 
 ### Information Disclosure
 - **Risk:** Secrets or proprietary code leaks through planner prompts or telemetry exports.
-- **Mitigation:** Planner redaction uses configurable regex patterns; executor secret scanning now chains regex detection with TruffleHog/GitLeaks and path allow-lists; telemetry exports remain opt-in and default to local storage only.
+- **Mitigation:** Planner redaction uses configurable regex patterns before persisting sessions; executor secret scanning chains regex detection with TruffleHog/GitLeaks and path allow-lists; telemetry exports remain opt-in and default to local storage only.
 
 ### Denial of Service
 - **Risk:** Long-running CI steps, runaway planners, or external API outages stall the loop.

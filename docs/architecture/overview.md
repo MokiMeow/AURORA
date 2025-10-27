@@ -20,9 +20,9 @@ All components operate in a workspace root with sandboxed execution boundaries; 
 - Publishes symbol, import, and call neighbors consumed by the planner context packer.
 
 ### Planner (`aurora.planner`)
-- Loads planner configuration (primary model, critics, retry policy, secret redaction).
-- Builds prompts by combining repository intelligence, telemetry snippets, and the experience vault.
-- Emits PDCA events for every planning run and persists artifacts (`artifacts/planner_output.txt`, `artifacts/self_edit.json`, critic feedback).
+- Loads planner configuration (primary model, routing rules, critics, retry policy, secret redaction).
+- Builds prompts by combining repository intelligence, telemetry snippets, and the experience vault, then routes the request via `PlannerRouter` to the appropriate provider (Ollama, OpenAI, Anthropic, Google) with configurable consensus across critics.
+- Emits PDCA events for every planning run, persists planner sessions (`artifacts/planner_sessions/`), and archives sanitized artifacts (`artifacts/planner_output.txt`, `artifacts/self_edit.json`, critic feedback).
 
 ### Executor (`aurora.executor`)
 - Applies patches through `git apply` with a dry-run guard, rejects edits that delete tests, and scans for secrets (regex + TruffleHog/GitLeaks backends) before running CI.
@@ -47,7 +47,7 @@ All components operate in a workspace root with sandboxed execution boundaries; 
 
 ## Data Flows
 
-1. **Plan:** Planner reads repo graph and embeddings, supplements with experience vault context, generates `self_edit.json`, and logs PDCA events.
+1. **Plan:** Planner reads repo graph and embeddings, supplements with experience vault context, selects a model route via `PlannerRouter`, generates `self_edit.json`, and logs PDCA events plus session trails.
 2. **Do:** Executor applies patches inside the configured sandbox, runs the requested CI profile, and logs outputs to artifacts.
 3. **Check:** Reward engine ingests CI results, computes reward plus metrics, and triggers evaluation pipelines as required.
 4. **Act / Learn:** Learning service updates adapters, pushes federation changes (if enabled), and records telemetry and governance artifacts.
