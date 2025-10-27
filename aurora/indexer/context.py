@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Iterable, Protocol
+from pathlib import Path
+import json
 
 from .store import GraphStore
 from .embedding import EmbeddingStore
@@ -29,11 +31,15 @@ class ContextPacker:
         embedding_store: EmbeddingStore,
         experience_vault: ExperienceVault | None = None,
         limit: int = 20,
+        swe_telemetry_path: Path | None = None,
+        policy_notes: tuple[dict, ...] = (),
     ) -> None:
         self._graph_store = graph_store
         self._embedding_store = embedding_store
         self._experience_vault = experience_vault
         self._limit = limit
+        self._swe_telemetry_path = swe_telemetry_path
+        self._policy_notes = policy_notes
 
     def build_context(self, query: str) -> list[ContextSlice]:
         slices: list[ContextSlice] = []
@@ -63,6 +69,23 @@ class ContextPacker:
                         score=entry.get("score", 0.5),
                     )
                 )
+        if self._swe_telemetry_path and self._swe_telemetry_path.exists():
+            for item in json.loads(self._swe_telemetry_path.read_text(encoding="utf-8"))[: self._limit]:
+                slices.append(
+                    ContextSlice(
+                        path=item.get("path", ""),
+                        summary=f"SWE telemetry: {item.get('summary', '')}",
+                        score=0.65,
+                    )
+                )
+        for note in self._policy_notes:
+            slices.append(
+                ContextSlice(
+                    path=note.get("path", ""),
+                    summary=f"Policy note: {note.get('message', '')}",
+                    score=0.55,
+                )
+            )
 
         slices = sorted(slices, key=lambda s: s.score, reverse=True)
         deduped: list[ContextSlice] = []

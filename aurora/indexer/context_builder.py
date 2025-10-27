@@ -12,11 +12,15 @@ def build_context_packer(
     embedding_store: EmbeddingStore,
     experience_vault=None,
     limit: int = 20,
+    swe_telemetry_path=None,
+    policy_notes=(),
 ) -> ContextPacker:
     return ContextPacker(
         graph_store=graph_store,
         embedding_store=embedding_store,
         experience_vault=experience_vault,
         limit=limit,
+        swe_telemetry_path=swe_telemetry_path,
+        policy_notes=policy_notes,
     )
 

@@ -44,6 +44,8 @@ class PlannerService:
             embedding_store=embedding_store,
             experience_vault=experience_vault,
             limit=20,
+            swe_telemetry_path=self._config.swe_telemetry_path,
+            policy_notes=self._config.policy_notes,
         )
 
     async def generate_self_edit(self, task: str, auto: bool, critic: bool) -> SelfEdit:

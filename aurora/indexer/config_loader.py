@@ -26,6 +26,8 @@ def load_indexer_config(base_path: Path, path: Path) -> IndexerConfig:
         neo4j_password=data.get("neo4j", {}).get("password"),
         include_tests=data.get("include_tests", True),
         include_docs=data.get("include_docs", True),
+        swe_telemetry_path=(Path(data["swe_telemetry_path"]).resolve() if data.get("swe_telemetry_path") else None),
+        policy_notes=tuple(data.get("policy_notes", [])),
     )
 
 

@@ -10,4 +10,8 @@ neo4j:
   uri: bolt://localhost:7687
   user: neo4j
   password: ${NEO4J_PASSWORD}
+swe_telemetry_path: telemetry/swe_bench.json
+policy_notes:
+  - path: SECURITY.md
+    message: "Follow updated OWASP guidelines"
 

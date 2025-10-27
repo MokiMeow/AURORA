@@ -36,4 +36,6 @@ class IndexerConfig:
     neo4j_password: str | None = None
     include_tests: bool = True
     include_docs: bool = True
+    swe_telemetry_path: Path | None = None
+    policy_notes: tuple[dict, ...] = ()
 
