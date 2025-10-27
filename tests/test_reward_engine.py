@@ -26,10 +26,11 @@ def test_reward_engine_computes_reward(tmp_path: Path):
         scheduler=scheduler,
         experience_logger=experience_logger,
         log_path=tmp_path / "history.jsonl",
+        policy=RewardPolicy(),
     )
-    reward = engine.compute_reward([
+    result = engine.compute_reward([
         {"step": "test", "success": True},
         {"step": "security", "success": True},
     ])
-    assert reward > 0
+    assert result.reward > 0
 

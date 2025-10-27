@@ -27,6 +27,7 @@ class RewardInputs:
     delta_security_score: float
     delta_cyclomatic: float
     policy_bonus: float
+    bias_penalty: float = 0.0
 
 
 class RewardCalculator:
@@ -45,6 +46,8 @@ class RewardCalculator:
             + self._weights.complexity * inputs.delta_cyclomatic
             + self._weights.policy * inputs.policy_bonus
         )
+        if hasattr(inputs, "bias_penalty"):
+            reward -= inputs.bias_penalty
         if self._explainability_dir:
             self._write_explainability(inputs, reward)
         return reward

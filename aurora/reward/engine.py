@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import List
 
@@ -10,7 +11,14 @@ from .collectors import MetricCollector
 from .calculator import RewardCalculator, RewardInputs
 from .adaptive import AdaptiveScheduler
 from .experience import ExperienceLogger, ExperienceRecord
-from dataclasses import asdict
+from .policy import RewardPolicy
+
+
+@dataclass(slots=True)
+class RewardResult:
+    reward: float
+    metrics: dict
+    success: bool
 
 
 class RewardEngine:
@@ -21,6 +29,7 @@ class RewardEngine:
         scheduler: AdaptiveScheduler,
         experience_logger: ExperienceLogger,
         log_path: Path,
+        policy: RewardPolicy,
     ) -> None:
         self._collector = collector
         self._calculator = calculator
@@ -28,8 +37,9 @@ class RewardEngine:
         self._experience_logger = experience_logger
         self._history_path = log_path
         self._history_path.parent.mkdir(parents=True, exist_ok=True)
+        self._policy = policy
 
-    def compute_reward(self, ci_results: List[dict]) -> float:
+    def compute_reward(self, ci_results: List[dict]) -> RewardResult:
         snapshot = self._collector.from_ci_results(ci_results)
         inputs = RewardInputs(
             delta_tests_passed=snapshot.tests_passed,
@@ -44,7 +54,8 @@ class RewardEngine:
         history_record = {"reward": reward, "metrics": metrics_dict}
         self._append_history(history_record)
         self._scheduler.adjust([history_record])
-        success = reward > 0 and snapshot.security_score == 1.0
+        policy_result = self._policy.evaluate(reward, metrics_dict)
+        success = policy_result.accepted
         self._experience_logger.append(
             ExperienceRecord(
                 path="latest",
@@ -53,7 +64,7 @@ class RewardEngine:
                 metadata=metrics_dict,
             )
         )
-        return reward
+        return RewardResult(reward=reward, metrics=metrics_dict, success=success)
 
     def _append_history(self, record: dict) -> None:
         with self._history_path.open("a", encoding="utf-8") as handle:

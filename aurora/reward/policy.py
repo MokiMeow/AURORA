@@ -12,9 +12,10 @@ class RewardPolicyResult:
 
 
 class RewardPolicy:
-    def __init__(self, min_reward: float = 0.0, require_security_pass: bool = True) -> None:
+    def __init__(self, min_reward: float = 0.0, require_security_pass: bool = True, max_bias: float = 0.05) -> None:
         self._min_reward = min_reward
         self._require_security_pass = require_security_pass
+        self._max_bias = max_bias
 
     def evaluate(self, reward: float, metrics: dict) -> RewardPolicyResult:
         reasons: list[str] = []
@@ -25,5 +26,8 @@ class RewardPolicy:
         if self._require_security_pass and metrics.get("security_score", 0) < 1.0:
             accepted = False
             reasons.append("Security score did not pass")
+        if metrics.get("bias_score", 0) > self._max_bias:
+            accepted = False
+            reasons.append("Bias score exceeded threshold")
         return RewardPolicyResult(accepted=accepted, reasons=reasons)
 

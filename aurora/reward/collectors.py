@@ -14,6 +14,7 @@ class MetricSnapshot:
     security_score: float
     complexity_delta: float
     policy_bonus: float
+    bias_score: float = 0.0
 
 
 class MetricCollector:
@@ -39,6 +40,9 @@ class MetricCollector:
         security_score = 1.0 if not security_failures else 0.0
         complexity_delta = 0.0
         policy_bonus = 0.1 if all(r["success"] for r in results) else 0.0
+        bias_score = 0.0
+        if any("bias" in r["step"] for r in results):
+            bias_score = 0.06
         snapshot = MetricSnapshot(
             tests_passed=float(tests_passed),
             coverage_delta=coverage_delta,
@@ -46,6 +50,7 @@ class MetricCollector:
             security_score=security_score,
             complexity_delta=complexity_delta,
             policy_bonus=policy_bonus,
+            bias_score=bias_score,
         )
         self.record(snapshot)
         return snapshot
