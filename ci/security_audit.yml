@@ -1,0 +1,20 @@
+name: Security Audit
+
+on:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev]
+      - name: Dependency audit
+        run: bash scripts/dependency_audit.sh
+      - name: License check
+        run: bash scripts/license_check.sh
+      - name: SBOM diff
+        run: bash scripts/sbom_diff.sh
