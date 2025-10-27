@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from .config import CIPipelineStep, CIProfile, ExecutorConfig, FirecrackerConfig
+from .config import CIPipelineStep, CIProfile, ExecutorConfig, FirecrackerConfig, SandboxPolicies
 
 
 def load_executor_config(workspace: Path, config_path: Path) -> ExecutorConfig:
@@ -36,23 +36,31 @@ def load_executor_config(workspace: Path, config_path: Path) -> ExecutorConfig:
             fail_fast=profile_data.get("fail_fast", False),
         )
         profiles[name] = profile
-    docker_cfg = data.get("docker", {})
+    sandbox_cfg = data.get("runtime", {})
+    default_runtime = sandbox_cfg.get("default", "docker")
+    docker_cfg = sandbox_cfg.get("options", {}).get("docker", {})
     firecracker_cfg = None
-    if "firecracker" in data:
-        fc = data["firecracker"]
+    fc_opt = sandbox_cfg.get("options", {}).get("firecracker")
+    if fc_opt and fc_opt.get("enabled", False):
         firecracker_cfg = FirecrackerConfig(
-            kernel_image=Path(fc["kernel_image"]),
-            rootfs_image=Path(fc["rootfs_image"]),
+            kernel_image=Path(fc_opt["kernel_image"]),
+            rootfs_image=Path(fc_opt["rootfs"]),
         )
+    policies_cfg = sandbox_cfg.get("policies", {})
+    sandbox_policies = SandboxPolicies(
+        egress_allowed=policies_cfg.get("egress", False),
+        storage_mounts=policies_cfg.get("storage_mounts", []),
+    )
     return ExecutorConfig(
         workspace=workspace,
         profiles=profiles,
-        sandbox=data.get("sandbox", "docker"),
+        sandbox=default_runtime,
         artifacts_dir=workspace / "artifacts",
         policy_path=Path(data.get("policy_path", "policies/security.yaml")),
         docker_image=docker_cfg.get("image"),
         docker_env=docker_cfg.get("env"),
         docker_mounts=docker_cfg.get("mounts"),
         firecracker_config=firecracker_cfg,
+        sandbox_policies=sandbox_policies,
     )
 

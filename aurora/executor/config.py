@@ -29,6 +29,12 @@ class FirecrackerConfig:
 
 
 @dataclass(slots=True)
+class SandboxPolicies:
+    egress_allowed: bool
+    storage_mounts: list[dict]
+
+
+@dataclass(slots=True)
 class ExecutorConfig:
     workspace: Path
     profiles: dict[str, CIProfile]
@@ -39,4 +45,5 @@ class ExecutorConfig:
     docker_env: Dict[str, str] | None = None
     docker_mounts: List[dict] | None = None
     firecracker_config: FirecrackerConfig | None = None
+    sandbox_policies: SandboxPolicies | None = None
 

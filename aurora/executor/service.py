@@ -33,6 +33,7 @@ class ExecutorService:
         secret_scanner: SecretScanner,
         policy_evaluator: PolicyEvaluator,
         circuit_breaker_limit: int = 3,
+        error_log: Path | None = Path("telemetry/errors.jsonl"),
     ) -> None:
         self._config = config
         self._ci_orchestrator = ci_orchestrator
@@ -40,6 +41,7 @@ class ExecutorService:
         self._policy_evaluator = policy_evaluator
         self._fatal_failures = 0
         self._circuit_breaker_limit = circuit_breaker_limit
+        self._error_log = error_log
 
     def apply(self, edit_path: Path, profile: str) -> None:
         if self._fatal_failures >= self._circuit_breaker_limit:
@@ -54,9 +56,11 @@ class ExecutorService:
             results = self._run_ci(profile)
         except PatchApplicationError as exc:
             self._fatal_failures += 1
+            self._log_error("fatal", str(exc))
             PDCAEntry(phase="Do", event="failure", payload={"type": "fatal", "error": str(exc)}).write()
             raise
         except Exception as exc:
+            self._log_error("retryable", str(exc))
             PDCAEntry(phase="Do", event="failure", payload={"type": "retryable", "error": str(exc)}).write()
             raise
         summary = diff_summary(self._config.workspace)
@@ -73,6 +77,7 @@ class ExecutorService:
         if not policy_result.accepted:
             PDCAEntry(phase="Act", event="policy_reject", payload={"reasons": policy_result.reasons}).write()
             self._fatal_failures += 1
+            self._log_error("fatal", "Policy failure: " + "; ".join(policy_result.reasons))
             raise RuntimeError("Policy evaluation failed: " + "; ".join(policy_result.reasons))
         summary_path = self._config.artifacts_dir / "executor_summary.json"
         summary_path.write_text(json.dumps({"ci_results": ci_payload, "policy": policy_result.reasons}, indent=2))
@@ -99,4 +104,12 @@ class ExecutorService:
         if not profile:
             raise ValueError(f"Unknown CI profile {profile_name}")
         return self._ci_orchestrator.run_profile(profile, workdir=self._config.workspace)
+
+    def _log_error(self, category: str, message: str) -> None:
+        if not self._error_log:
+            return
+        record = {"category": category, "message": message}
+        self._error_log.parent.mkdir(parents=True, exist_ok=True)
+        with self._error_log.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record) + "\n")
 

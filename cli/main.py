@@ -103,6 +103,13 @@ def apply(
             image=config.docker_image or "aurora-se/executor:latest",
             mounts=config.docker_mounts or [],
             env=config.docker_env,
+            network="none" if config.sandbox_policies and not config.sandbox_policies.egress_allowed else None,
+        )
+    elif config.sandbox == "firecracker" and config.firecracker_config:
+        sandbox = FirecrackerSandbox(
+            kernel_image=config.firecracker_config.kernel_image,
+            rootfs_image=config.firecracker_config.rootfs_image,
+            workspace=config.workspace,
         )
     else:
         sandbox = LocalSandbox()
