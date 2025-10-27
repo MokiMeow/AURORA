@@ -33,4 +33,5 @@ def test_reward_engine_computes_reward(tmp_path: Path):
         {"step": "security", "success": True},
     ])
     assert result.reward > 0
+    assert result.success is True
 

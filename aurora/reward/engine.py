@@ -19,6 +19,7 @@ class RewardResult:
     reward: float
     metrics: dict
     success: bool
+    reasons: list[str]
 
 
 class RewardEngine:
@@ -48,6 +49,7 @@ class RewardEngine:
             delta_security_score=snapshot.security_score,
             delta_cyclomatic=snapshot.complexity_delta,
             policy_bonus=snapshot.policy_bonus,
+            bias_penalty=max(snapshot.bias_score - 0.05, 0) * 10,
         )
         reward = self._calculator.compute(inputs)
         metrics_dict = asdict(snapshot)
@@ -58,13 +60,14 @@ class RewardEngine:
         success = policy_result.accepted
         self._experience_logger.append(
             ExperienceRecord(
-                path="latest",
+                context={"task": ci_results},
+                edit=metrics_dict,
+                telemetry={"policy": policy_result.reasons},
                 reward=reward,
-                success=success,
-                metadata=metrics_dict,
+                regret=not success,
             )
         )
-        return RewardResult(reward=reward, metrics=metrics_dict, success=success)
+        return RewardResult(reward=reward, metrics=metrics_dict, success=success, reasons=policy_result.reasons)
 
     def _append_history(self, record: dict) -> None:
         with self._history_path.open("a", encoding="utf-8") as handle:
