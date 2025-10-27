@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
+from typing import Sequence, Dict, List
 
 
 @dataclass(slots=True)
@@ -29,4 +29,7 @@ class ExecutorConfig:
     sandbox: str
     artifacts_dir: Path
     policy_path: Path | None = None
+    docker_image: str | None = None
+    docker_env: Dict[str, str] | None = None
+    docker_mounts: List[dict] | None = None
 

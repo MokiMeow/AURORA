@@ -27,3 +27,28 @@ class LocalSandbox(SandboxRunner):
             raise SandboxError(result.stderr)
         return result.returncode
 
+
+@dataclass(slots=True)
+class DockerSandbox(SandboxRunner):
+    image: str
+    mounts: Sequence[dict]
+    env: dict[str, str] | None = None
+
+    def run(self, command: Sequence[str], workdir: Path | None = None) -> int:
+        docker_command = [
+            "docker",
+            "run",
+            "--rm",
+        ]
+        for mount in self.mounts:
+            docker_command.extend(["-v", f"{mount['source']}:{mount['target']}:{mount.get('mode', 'rw')}" ])
+        if self.env:
+            for key, value in self.env.items():
+                docker_command.extend(["-e", f"{key}={value}"])
+        docker_command.extend([self.image])
+        docker_command.extend(command)
+        result = subprocess.run(docker_command, cwd=workdir, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise SandboxError(result.stderr)
+        return result.returncode
+

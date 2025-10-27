@@ -18,6 +18,7 @@ from aurora.planner.service import PlannerService
 from aurora.planner.config_loader import load_planner_config
 from aurora.executor.config_loader import load_executor_config
 from aurora.executor import ExecutorService, CIOrchestrator, LocalSandbox
+from aurora.executor.sandbox import DockerSandbox
 from aurora.security.secrets import SecretScanner, SecretScannerConfig
 from aurora.learn.config import TrainingConfig, HardwareConfig
 from aurora.learn.service import LearningService
@@ -97,7 +98,14 @@ def apply(
     """Apply a self-edit inside sandbox and run CI profile."""
 
     config = load_executor_config(Path.cwd(), executor_config)
-    sandbox = LocalSandbox()
+    if config.sandbox == "docker":
+        sandbox = DockerSandbox(
+            image=config.docker_image or "aurora-se/executor:latest",
+            mounts=config.docker_mounts or [],
+            env=config.docker_env,
+        )
+    else:
+        sandbox = LocalSandbox()
     ci_orchestrator = CIOrchestrator(sandbox=sandbox, artifacts_dir=Path("artifacts"))
     secret_scanner = SecretScanner(SecretScannerConfig(patterns=(r"secret",)))
     executor = ExecutorService(config=config, ci_orchestrator=ci_orchestrator, secret_scanner=secret_scanner)

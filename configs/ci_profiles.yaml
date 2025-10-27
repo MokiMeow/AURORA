@@ -1,38 +1,47 @@
-fast:
-  steps:
-    - name: lint
-      command: npm run lint
-    - name: unit
-      command: pytest
-    - name: bandit
-      command: bandit -r .
-    - name: semgrep
-      command: semgrep --config auto
-  timeout_minutes: 15
-  fail_fast: true
-balanced:
-  extends: fast
-  steps:
-    - name: typecheck
-      command: mypy aurora
-    - name: coverage
-      command: pytest --cov=aurora
-    - name: k6_smoke
-      command: k6 run configs/perf/smoke.js
-    - name: sbom_diff
-      command: syft packages dir:. -o json > artifacts/sbom.json
-  timeout_minutes: 45
-  fail_fast: false
-thorough:
-  extends: balanced
-  steps:
-    - name: fuzz
-      command: python scripts/run_fuzz.py
-    - name: k6_endurance
-      command: k6 run configs/perf/endurance.js
-    - name: dependency_audit
-      command: poetry export --format requirements.txt | trivy fs --input -
-    - name: license_scan
-      command: scripts/license_check.sh
-  timeout_minutes: 120
-  fail_fast: false
+profiles:
+  fast:
+    steps:
+      - name: lint
+        command: ["npm", "run", "lint"]
+      - name: unit
+        command: ["pytest"]
+      - name: bandit
+        command: ["bandit", "-r", "."]
+      - name: semgrep
+        command: ["semgrep", "--config", "auto"]
+    timeout_minutes: 20
+    fail_fast: true
+  balanced:
+    extends: fast
+    steps:
+      - name: typecheck
+        command: ["mypy", "aurora"]
+      - name: coverage
+        command: ["pytest", "--cov=aurora"]
+      - name: k6_smoke
+        command: ["k6", "run", "configs/perf/smoke.js"]
+      - name: sbom_diff
+        command: ["bash", "scripts/sbom_diff.sh"]
+    timeout_minutes: 45
+    fail_fast: false
+  thorough:
+    extends: balanced
+    steps:
+      - name: fuzz
+        command: ["python", "scripts/run_fuzz.py"]
+      - name: k6_endurance
+        command: ["k6", "run", "configs/perf/endurance.js"]
+      - name: dependency_audit
+        command: ["bash", "scripts/dependency_audit.sh"]
+      - name: license_scan
+        command: ["bash", "scripts/license_check.sh"]
+      - name: grype_scan
+        command: ["bash", "scripts/grype_scan.sh"]
+    timeout_minutes: 120
+    fail_fast: false
+
+scripts:
+  sbom_diff: "scripts/sbom_diff.sh"
+  dependency_audit: "scripts/dependency_audit.sh"
+  license_check: "scripts/license_check.sh"
+  grype_scan: "scripts/grype_scan.sh"

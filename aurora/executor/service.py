@@ -43,9 +43,15 @@ class ExecutorService:
             raise FileNotFoundError(f"Edit file {edit_path} does not exist")
         self_edit = SelfEdit.model_validate_json(edit_path.read_text(encoding="utf-8"))
         PDCAEntry(phase="Do", event="start", payload={"intent": self_edit.intent, "profile": profile}).write()
-        self._apply_patches(self_edit.patches)
-        self._scan_for_secrets()
-        results = self._run_ci(profile)
+        try:
+            self._apply_patches(self_edit.patches)
+            self._scan_for_secrets()
+            results = self._run_ci(profile)
+        except Exception as exc:
+            for patch in self_edit.patches:
+                rollback_patch(patch["diff"], self._config.workspace)
+            PDCAEntry(phase="Do", event="failure", payload={"error": str(exc)}).write()
+            raise
         summary = diff_summary(self._config.workspace)
         ci_payload = [
             {"step": result.step, "success": result.success, "log": str(result.output_path)}

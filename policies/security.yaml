@@ -10,4 +10,7 @@ dependency_rules:
   semgrep:
     categories:
       - security
+required_steps:
+  - k6
+  - grype
 
