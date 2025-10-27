@@ -11,6 +11,7 @@ from tree_sitter import Language, Parser
 from tree_sitter_languages import get_parser, get_language
 
 from .config import IndexerConfig, LanguageConfig
+from .graph import CodeGraph
 
 LOGGER = logging.getLogger(__name__)
 
@@ -30,6 +31,8 @@ class ParsedUnit:
     symbols: list[str]
     imports: list[str]
     content: str
+    tests: list[str]
+    calls: list[str]
 
 
 class TreeSitterParser:
@@ -58,7 +61,10 @@ class TreeSitterParser:
                 LOGGER.warning("No parser for language %s", source.language.name)
                 continue
             tree = parser.parse(source.content.encode("utf-8"))
-            symbols, imports = self._run_queries(parser, tree, source)
+            symbols, imports, calls = self._run_queries(parser, tree, source)
+            if not symbols:
+                symbols = [source.path.stem]
+            tests = self._detect_tests(source)
             yield ParsedUnit(
                 path=source.path,
                 language=source.language.name,
@@ -66,6 +72,8 @@ class TreeSitterParser:
                 symbols=symbols,
                 imports=imports,
                 content=source.content,
+                tests=tests,
+                calls=calls,
             )
 
     def _run_queries(
@@ -73,13 +81,14 @@ class TreeSitterParser:
         parser: Parser,
         tree: object,
         source: SourceFile,
-    ) -> tuple[list[str], list[str]]:
+    ) -> tuple[list[str], list[str], list[str]]:
         language_config = source.language
         symbols: list[str] = []
         imports: list[str] = []
+        calls: list[str] = []
         queries = language_config.queries
         if not queries:
-            return symbols, imports
+            return symbols, imports, calls
         if queries.symbols:
             symbols.extend(
                 self._execute_query(
@@ -98,7 +107,16 @@ class TreeSitterParser:
                     queries.imports,
                 ),
             )
-        return symbols, imports
+        if queries.calls:
+            calls.extend(
+                self._execute_query(
+                    parser,
+                    tree,
+                    source,
+                    queries.calls,
+                ),
+            )
+        return symbols, imports, calls
 
     @staticmethod
     def _execute_query(
@@ -116,6 +134,11 @@ class TreeSitterParser:
         for node, _ in matches:
             results.append(content_bytes[node.start_byte : node.end_byte].decode("utf-8"))
         return results
+
+    def _detect_tests(self, source: SourceFile) -> list[str]:
+        if source.path.name.startswith("test_") or "/tests/" in str(source.path).replace("\\", "/"):
+            return [source.path.as_posix()]
+        return []
 
     @staticmethod
     def _build_parser(language_name: str) -> Parser:

@@ -42,7 +42,8 @@ dependencies = [
   "plotly>=5.24",
   "docker>=7.1",
   "semver>=3.0",
-  "tenacity>=8.3"
+  "tenacity>=8.3",
+  "neo4j>=5.17"
 ]
 
 [tool.hatch.build.targets.wheel]

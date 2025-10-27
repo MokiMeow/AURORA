@@ -6,6 +6,7 @@ languages:
     queries:
       symbols: queries/python-symbols.scm
       imports: queries/python-imports.scm
+      calls: queries/python-calls.scm
   - name: typescript
     tree_sitter: typescript
     file_extensions: [".ts", ".tsx"]
@@ -13,6 +14,7 @@ languages:
     queries:
       symbols: queries/typescript-symbols.scm
       imports: queries/typescript-imports.scm
+      calls: queries/typescript-calls.scm
   - name: javascript
     tree_sitter: javascript
     file_extensions: [".js", ".jsx"]
@@ -20,6 +22,7 @@ languages:
     queries:
       symbols: queries/javascript-symbols.scm
       imports: queries/javascript-imports.scm
+      calls: queries/javascript-calls.scm
   - name: markdown
     tree_sitter: markdown
     file_extensions: [".md"]

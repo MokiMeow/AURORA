@@ -35,4 +35,5 @@ def test_parser_scans_python_files(tmp_path: Path):
     units = list(parser.parse_sources(sources))
     assert len(units) == 1
     assert units[0].language == "python"
+    assert units[0].symbols
 

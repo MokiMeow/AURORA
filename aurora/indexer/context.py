@@ -7,6 +7,7 @@ from typing import Iterable, Protocol
 
 from .store import GraphStore
 from .embedding import EmbeddingStore
+from .graph import CodeGraph
 
 
 @dataclass(slots=True)
@@ -39,6 +40,10 @@ class ContextPacker:
 
         for path in self._graph_store.find_symbols(query, limit=self._limit):
             slices.append(ContextSlice(path=path, summary=f"Symbol match for {query}", score=0.9))
+            for neighbor in self._graph_store.neighbors(path, kind="call"):
+                slices.append(ContextSlice(path=neighbor, summary=f"Call neighbor of {path}", score=0.6))
+            for neighbor in self._graph_store.neighbors(path, kind="import"):
+                slices.append(ContextSlice(path=neighbor, summary=f"Import neighbor of {path}", score=0.5))
 
         for record in self._embedding_store.query(limit=self._limit):
             slices.append(

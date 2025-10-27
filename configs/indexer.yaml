@@ -6,4 +6,8 @@ embedding_model: hash32
 milvus_enabled: false
 include_tests: true
 include_docs: true
+neo4j:
+  uri: bolt://localhost:7687
+  user: neo4j
+  password: ${NEO4J_PASSWORD}
 

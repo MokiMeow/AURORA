@@ -21,9 +21,9 @@ def load_indexer_config(base_path: Path, path: Path) -> IndexerConfig:
         embedding_model=data.get("embedding_model", "hash32"),
         milvus_enabled=data.get("milvus_enabled", False),
         milvus_uri=data.get("milvus_uri"),
-        neo4j_uri=data.get("neo4j_uri"),
-        neo4j_user=data.get("neo4j_user"),
-        neo4j_password=data.get("neo4j_password"),
+        neo4j_uri=data.get("neo4j", {}).get("uri"),
+        neo4j_user=data.get("neo4j", {}).get("user"),
+        neo4j_password=data.get("neo4j", {}).get("password"),
         include_tests=data.get("include_tests", True),
         include_docs=data.get("include_docs", True),
     )

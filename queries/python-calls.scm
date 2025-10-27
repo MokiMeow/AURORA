@@ -1,0 +1,2 @@
+(call function: (identifier) @call)
+
