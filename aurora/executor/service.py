@@ -12,6 +12,7 @@ from typing import Iterable
 
 from ..planner.schema import SelfEdit
 from ..security.secrets import SecretScanner
+from .patch import apply as apply_patch, dry_run as dry_run_patch, rollback as rollback_patch, diff_summary, detect_test_deletions, PatchError
 from ..planner.pdca import PDCAEntry
 from .ci import CIOrchestrator
 from .config import ExecutorConfig
@@ -45,6 +46,7 @@ class ExecutorService:
         self._apply_patches(self_edit.patches)
         self._scan_for_secrets()
         results = self._run_ci(profile)
+        summary = diff_summary(self._config.workspace)
         ci_payload = [
             {"step": result.step, "success": result.success, "log": str(result.output_path)}
             for result in results
@@ -52,7 +54,7 @@ class ExecutorService:
         PDCAEntry(
             phase="Check",
             event="ci_results",
-            payload={"profile": profile, "results": ci_payload},
+            payload={"profile": profile, "results": ci_payload, "diff": summary},
         ).write()
         policy_result = self._policy_evaluator.evaluate(ci_payload)
         if not policy_result.accepted:
@@ -64,16 +66,12 @@ class ExecutorService:
 
     def _apply_patches(self, patches: Iterable[dict]) -> None:
         for patch in patches:
-            patch_content = patch["diff"].encode("utf-8")
-            process = subprocess.run(
-                ["git", "apply", "-"],
-                input=patch_content,
-                cwd=self._config.workspace,
-                capture_output=True,
-            )
-            if process.returncode != 0:
-                LOGGER.error("Failed to apply patch: %s", process.stderr.decode("utf-8"))
-                raise PatchApplicationError(process.stderr.decode("utf-8"))
+            diff = patch["diff"]
+            dry_run_patch(diff, self._config.workspace)
+            deletions = detect_test_deletions(diff)
+            if deletions:
+                raise PatchApplicationError(f"Patch deletes tests: {deletions}")
+            apply_patch(diff, self._config.workspace)
 
     def _scan_for_secrets(self) -> None:
         for path in self._config.workspace.rglob("*"):
