@@ -32,13 +32,18 @@ class ExecutorService:
         ci_orchestrator: CIOrchestrator,
         secret_scanner: SecretScanner,
         policy_evaluator: PolicyEvaluator,
+        circuit_breaker_limit: int = 3,
     ) -> None:
         self._config = config
         self._ci_orchestrator = ci_orchestrator
         self._secret_scanner = secret_scanner
         self._policy_evaluator = policy_evaluator
+        self._fatal_failures = 0
+        self._circuit_breaker_limit = circuit_breaker_limit
 
     def apply(self, edit_path: Path, profile: str) -> None:
+        if self._fatal_failures >= self._circuit_breaker_limit:
+            raise RuntimeError("Circuit breaker tripped; executor halted")
         if not edit_path.exists():
             raise FileNotFoundError(f"Edit file {edit_path} does not exist")
         self_edit = SelfEdit.model_validate_json(edit_path.read_text(encoding="utf-8"))
@@ -47,10 +52,12 @@ class ExecutorService:
             self._apply_patches(self_edit.patches)
             self._scan_for_secrets()
             results = self._run_ci(profile)
+        except PatchApplicationError as exc:
+            self._fatal_failures += 1
+            PDCAEntry(phase="Do", event="failure", payload={"type": "fatal", "error": str(exc)}).write()
+            raise
         except Exception as exc:
-            for patch in self_edit.patches:
-                rollback_patch(patch["diff"], self._config.workspace)
-            PDCAEntry(phase="Do", event="failure", payload={"error": str(exc)}).write()
+            PDCAEntry(phase="Do", event="failure", payload={"type": "retryable", "error": str(exc)}).write()
             raise
         summary = diff_summary(self._config.workspace)
         ci_payload = [
@@ -65,6 +72,7 @@ class ExecutorService:
         policy_result = self._policy_evaluator.evaluate(ci_payload)
         if not policy_result.accepted:
             PDCAEntry(phase="Act", event="policy_reject", payload={"reasons": policy_result.reasons}).write()
+            self._fatal_failures += 1
             raise RuntimeError("Policy evaluation failed: " + "; ".join(policy_result.reasons))
         summary_path = self._config.artifacts_dir / "executor_summary.json"
         summary_path.write_text(json.dumps({"ci_results": ci_payload, "policy": policy_result.reasons}, indent=2))

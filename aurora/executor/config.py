@@ -23,6 +23,12 @@ class CIProfile:
 
 
 @dataclass(slots=True)
+class FirecrackerConfig:
+    kernel_image: Path
+    rootfs_image: Path
+
+
+@dataclass(slots=True)
 class ExecutorConfig:
     workspace: Path
     profiles: dict[str, CIProfile]
@@ -32,4 +38,5 @@ class ExecutorConfig:
     docker_image: str | None = None
     docker_env: Dict[str, str] | None = None
     docker_mounts: List[dict] | None = None
+    firecracker_config: FirecrackerConfig | None = None
 

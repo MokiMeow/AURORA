@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
@@ -48,6 +49,22 @@ class DockerSandbox(SandboxRunner):
         docker_command.extend([self.image])
         docker_command.extend(command)
         result = subprocess.run(docker_command, cwd=workdir, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise SandboxError(result.stderr)
+        return result.returncode
+
+
+@dataclass(slots=True)
+class FirecrackerSandbox(SandboxRunner):
+    kernel_image: Path
+    rootfs_image: Path
+    workspace: Path
+
+    def run(self, command: Sequence[str], workdir: Path | None = None) -> int:
+        # Placeholder for firecracker integration
+        LOGGER = logging.getLogger(__name__)
+        LOGGER.warning("Firecracker sandbox not fully implemented; running locally")
+        result = subprocess.run(command, cwd=workdir or self.workspace, capture_output=True, text=True)
         if result.returncode != 0:
             raise SandboxError(result.stderr)
         return result.returncode
