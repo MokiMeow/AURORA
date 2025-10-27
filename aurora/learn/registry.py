@@ -38,5 +38,6 @@ class AdapterRegistry:
         adapter_dir = self._root / info.name / info.version
         adapter_dir.mkdir(parents=True, exist_ok=True)
         metadata_path = adapter_dir / "metadata.json"
-        metadata_path.write_text(json.dumps(info.metadata, indent=2), encoding="utf-8")
+        metadata = info.metadata | {"name": info.name, "version": info.version}
+        metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 

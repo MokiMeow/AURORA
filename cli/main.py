@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+import json
 
 import typer
 
@@ -23,6 +24,7 @@ from aurora.learn.service import LearningService
 from aurora.eval.config_loader import load_evaluation_config
 from aurora.eval.service import EvaluationService
 from aurora.indexer.context import ContextPacker
+from aurora.learn.cli import list_adapters
 
 
 app = typer.Typer(help="AURORA-SE command-line interface")
@@ -120,6 +122,17 @@ def learn(
     service = LearningService(config)
     service.run(nightly=nightly)
     typer.echo("Learning pipeline triggered")
+
+
+@app.command()
+def adapters(command: str = typer.Argument(...), path: Path = typer.Option(Path("adapters"), "--path")) -> None:
+    """Adapter management commands."""
+
+    if command == "list":
+        adapters = list_adapters(path)
+        typer.echo(json.dumps(adapters, indent=2))
+    else:
+        raise typer.BadParameter("Unsupported adapters command")
 
 
 @app.command()
