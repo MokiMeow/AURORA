@@ -1,0 +1,14 @@
+name: Evaluate (Weekly)
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+jobs:
+  swe-bench-live:
+    uses: ./.github/workflows/templates/eval-suite.yml
+    with:
+      suite: swe-bench-live
+      python-version: "3.11"
+

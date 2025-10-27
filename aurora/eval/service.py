@@ -12,6 +12,7 @@ from typing import Any, Optional
 
 from ..planner.pdca import PDCAEntry
 from .config import EvaluationConfig, SuiteConfig
+from .analytics import generate_dashboard, export_metrics_csv, diff_sbom
 
 LOGGER = logging.getLogger(__name__)
 
@@ -68,6 +69,9 @@ class EvaluationService:
         telemetry_path = self._write_telemetry_snapshot(suite, raw_result)
         compliance_report = self._build_compliance_report(suite, metrics, sbom_path, telemetry_path)
         compliance_path.write_text(json.dumps(compliance_report, indent=2), encoding="utf-8")
+        export_metrics_csv(self._config.results_dir, self._config.results_dir / "metrics.csv")
+        generate_dashboard(self._config.results_dir, Path("docs/reports/weekly_dashboard.html"))
+        self._diff_sbom(suite, sbom_path)
         PDCAEntry(
             phase="Check",
             event="evaluation_complete",
@@ -77,8 +81,12 @@ class EvaluationService:
                 "metrics": metrics,
                 "compliance": compliance_report,
                 "run_id": run_id,
+                "planner_version": self._planner_version(),
+                "executor_version": self._executor_version(),
+                "reward_stats": self._reward_snapshot(),
             },
         ).write()
+        self._publish_governance_bundle(suite, compliance_report)
         return EvaluationResult(
             suite=suite_name,
             exit_code=process.returncode,
@@ -135,4 +143,37 @@ class EvaluationService:
         entry = json.dumps(raw_result, ensure_ascii=False)
         telemetry_path.write_text(entry + "\n", encoding="utf-8")
         return telemetry_path
+
+    def _diff_sbom(self, suite: SuiteConfig, current: Optional[Path]) -> None:
+        if not current:
+            return
+        sbom_dir = suite.artifacts_dir / "sbom"
+        sbom_dir.mkdir(parents=True, exist_ok=True)
+        previous_files = sorted(sbom_dir.glob(f"{suite.name}_*.json"))
+        prev = previous_files[-2] if len(previous_files) > 1 else None
+        if prev == current:
+            prev = None
+        output = sbom_dir / f"{suite.name}_sbom_diff.json"
+        diff_sbom(prev, current, output)
+
+    def _planner_version(self) -> str:
+        return "main"
+
+    def _executor_version(self) -> str:
+        return "main"
+
+    def _reward_snapshot(self) -> dict[str, Any]:
+        reward_log = Path("artifacts/reward_reports/latest_reward.json")
+        if reward_log.exists():
+            try:
+                return json.loads(reward_log.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                return {}
+        return {}
+
+    def _publish_governance_bundle(self, suite: SuiteConfig, report: dict[str, Any]) -> None:
+        from ..governance.bundle import assemble_bundle
+
+        bundle_path = Path("docs/governance/bundles") / f"{suite.name}_latest.json"
+        assemble_bundle(bundle_path, report)
 

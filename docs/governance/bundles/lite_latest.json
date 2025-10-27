@@ -1,0 +1,17 @@
+{
+  "evaluation": {
+    "suite": "lite",
+    "profile": "balanced",
+    "schedule": "nightly",
+    "metrics": {
+      "success_rate": 0.8,
+      "latency": 120.0,
+      "exit_code": 0,
+      "suite": "lite",
+      "profile": "balanced",
+      "run_id": "20251027T134135Z"
+    },
+    "sbom": "C:\\Users\\smohi\\AppData\\Local\\Temp\\pytest-of-smohi\\pytest-134\\test_evaluation_service_runs_a0\\artifacts\\sbom\\lite_20251027T134135Z.json",
+    "telemetry": "C:\\Users\\smohi\\AppData\\Local\\Temp\\pytest-of-smohi\\pytest-134\\test_evaluation_service_runs_a0\\artifacts\\telemetry\\lite_20251027T134135Z.jsonl"
+  }
+}

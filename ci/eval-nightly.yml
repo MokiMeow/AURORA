@@ -1,0 +1,32 @@
+name: Evaluate (Nightly)
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  swe-bench-lite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[learn]
+      - name: Fetch datasets
+        run: bash scripts/fetch_swe_bench.sh
+      - name: Run evaluation
+        run: aurora-se eval --suite swe-bench-lite
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: swe-bench-lite-results
+          path: |
+            eval/results/*lite*.json
+            artifacts/eval/**
+

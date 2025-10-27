@@ -12,4 +12,9 @@ suites:
     command: ["python", "run_live.py"]
     dataset: datasets/swe-bench-live
     schedule: weekly
+  swe-bench-full:
+    command: ["python", "run_full.py"]
+    dataset: datasets/swe-bench-full
+    schedule: monthly
+    profile: thorough
 
