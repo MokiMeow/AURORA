@@ -101,6 +101,14 @@ Each phase ends only when all exit criteria (deliverables + verification) are sa
 - Automated SBOM generation + security scan scripts in CI.
 - Audit logging integrated with `telemetry/errors.jsonl` and governance bundles.
 
+**Phase 1 Hardening Summary**
+
+- Docker runtime now enforces read-only root, curated mounts, seccomp/AppArmor profiles, and resource quotas.
+- Firecracker sandbox launches disposable microVMs via `firectl`, respecting egress policies and snapshotting rootfs.
+- Composite secret scanning (regex + TruffleHog/GitLeaks) with allow/deny lists protects workspaces.
+- Security policy DSL gates SBOM, CVE, and license reports generated in CI.
+- CI workflows emit SBOM/CVE/license artifacts and archive chaos test outcomes for governance.
+
 **Verification & Exit Criteria**
 
 - Security pen-test on sandbox surfaces.

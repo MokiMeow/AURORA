@@ -9,6 +9,12 @@ profiles:
         command: ["bandit", "-r", "."]
       - name: semgrep
         command: ["semgrep", "--config", "auto"]
+      - name: sbom_generate
+        command: ["bash", "scripts/generate_sbom.sh"]
+      - name: cve_scan
+        command: ["bash", "scripts/grype_scan.sh"]
+      - name: license_scan
+        command: ["bash", "scripts/license_check.sh"]
     timeout_minutes: 20
     fail_fast: true
   balanced:
@@ -41,6 +47,7 @@ profiles:
     fail_fast: false
 
 scripts:
+  generate_sbom: "scripts/generate_sbom.sh"
   sbom_diff: "scripts/sbom_diff.sh"
   dependency_audit: "scripts/dependency_audit.sh"
   license_check: "scripts/license_check.sh"

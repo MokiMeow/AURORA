@@ -32,3 +32,9 @@ jobs:
       - name: Tests
         run: pytest
 
+      - name: Security Artifacts
+        run: |
+          bash scripts/generate_sbom.sh
+          bash scripts/grype_scan.sh
+          bash scripts/license_check.sh
+

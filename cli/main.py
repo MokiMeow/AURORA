@@ -17,14 +17,22 @@ from aurora.indexer.service import IndexJobConfig, IndexerService
 from aurora.planner.service import PlannerService
 from aurora.executor.config_loader import load_executor_config
 from aurora.executor import ExecutorService, CIOrchestrator, LocalSandbox
-from aurora.executor.sandbox import DockerSandbox, FirecrackerSandbox, SandboxRunner
-from aurora.security.secrets import SecretScanner, SecretScannerConfig
+from aurora.executor.sandbox import (
+    DockerSandbox,
+    FirecrackerNetwork,
+    FirecrackerResources,
+    FirecrackerSandbox,
+    SandboxRunner,
+    build_mounts,
+)
+from aurora.security.secrets import SecretScanner, load_secret_scanner_config
 from aurora.executor.policy import PolicyEvaluator
 from aurora.learn.config_loader import load_training_config
 from aurora.learn.service import LearningService
 from aurora.eval.config_loader import load_evaluation_config
 from aurora.eval.service import EvaluationService
 from aurora.learn.cli import list_adapters, sync_adapter, rollback_adapter
+from aurora.telemetry.errors import ErrorLogger
 from aurora.telemetry.service import TelemetryService
 
 
@@ -98,24 +106,58 @@ def apply(
     """Apply a self-edit inside sandbox and run CI profile."""
 
     config = load_executor_config(Path.cwd(), executor_config)
+    error_logger = ErrorLogger(Path("telemetry/errors.jsonl"))
     sandbox: SandboxRunner
-    if config.sandbox == "docker":
+    policies = config.sandbox_policies
+    if config.sandbox == "docker" and config.docker:
+        mounts = build_mounts(config.docker.mounts)
+        network = config.docker.network
+        if policies and not policies.egress_allowed:
+            network = "none"
         sandbox = DockerSandbox(
-            image=config.docker_image or "aurora-se/executor:latest",
-            mounts=config.docker_mounts or [],
-            env=config.docker_env,
-            network="none" if config.sandbox_policies and not config.sandbox_policies.egress_allowed else None,
+            image=config.docker.image,
+            mounts=mounts,
+            env=config.docker.env,
+            network=network,
+            seccomp_profile=config.docker.seccomp_profile,
+            apparmor_profile=config.docker.apparmor_profile,
+            cpu_limit=config.docker.cpu_limit,
+            memory_limit=config.docker.memory_limit,
+            read_only_root=config.docker.read_only_root,
+            additional_args=config.docker.additional_args or (),
         )
     elif config.sandbox == "firecracker" and config.firecracker_config:
+        resources_cfg = config.firecracker_config.resources or {}
+        resources = FirecrackerResources(
+            vcpu_count=resources_cfg.get("vcpu_count", 2),
+            memory_mib=resources_cfg.get("memory_mib", 1024),
+            jailer_user=resources_cfg.get("jailer_user", 1000),
+            jailer_group=resources_cfg.get("jailer_group", 1000),
+        )
+        network_cfg = config.firecracker_config.network
+        firecracker_network = None
+        if network_cfg and policies and policies.egress_allowed:
+            firecracker_network = FirecrackerNetwork(
+                tap_device=network_cfg["tap_device"],
+                mac_address=network_cfg.get("mac_address", "AA:FC:00:00:00:01"),
+            )
         sandbox = FirecrackerSandbox(
             kernel_image=config.firecracker_config.kernel_image,
             rootfs_image=config.firecracker_config.rootfs_image,
             workspace=config.workspace,
+            resources=resources,
+            network=firecracker_network,
+            egress_allowed=bool(policies and policies.egress_allowed),
+            firecracker_bin=config.firecracker_config.firecracker_bin,
+            firectl_bin=config.firecracker_config.firectl_bin,
+            snapshot_dir=config.firecracker_config.snapshot_dir,
+            error_logger=error_logger,
         )
     else:
         sandbox = LocalSandbox()
     ci_orchestrator = CIOrchestrator(sandbox=sandbox, artifacts_dir=Path("artifacts"))
-    secret_scanner = SecretScanner(SecretScannerConfig(patterns=(r"secret",)))
+    secret_config = load_secret_scanner_config(Path("policies/secrets.yaml"), error_logger=error_logger)
+    secret_scanner = SecretScanner(secret_config)
     policy_evaluator = PolicyEvaluator(config.policy_path)
     executor = ExecutorService(
         config=config,

@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-syft dir:. -o json > artifacts/sbom_current.json
-if [[ -f artifacts/sbom_previous.json ]]; then
-  diff artifacts/sbom_previous.json artifacts/sbom_current.json || true
-fi
-cp artifacts/sbom_current.json artifacts/sbom_previous.json
+ARTIFACT_DIR="artifacts"
+SBOM_PATH="${ARTIFACT_DIR}/sbom.json"
+PREVIOUS="${ARTIFACT_DIR}/sbom_previous.json"
 
+if [[ ! -f "${SBOM_PATH}" ]]; then
+  bash scripts/generate_sbom.sh
+fi
+
+if [[ -f "${PREVIOUS}" ]]; then
+  diff "${PREVIOUS}" "${SBOM_PATH}" || true
+fi
+cp "${SBOM_PATH}" "${PREVIOUS}"

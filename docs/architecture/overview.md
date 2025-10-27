@@ -1,6 +1,6 @@
 # Aurora-SE Architecture Overview
 
-This document captures the current production architecture for Aurora-SE after the Phase 0 hardening pass. It expands on the summary in `plan.md` and provides component-level responsibilities plus the data flows that enable the PDCA loop.
+This document captures the production architecture for Aurora-SE after the Phase 1 sandbox & security hardening. It expands on the summary in `plan.md` and provides component-level responsibilities plus the data flows that enable the PDCA loop.
 
 ## System Context
 
@@ -25,8 +25,8 @@ All components operate in a workspace root with sandboxed execution boundaries; 
 - Emits PDCA events for every planning run and persists artifacts (`artifacts/planner_output.txt`, `artifacts/self_edit.json`, critic feedback).
 
 ### Executor (`aurora.executor`)
-- Applies patches through `git apply` with a dry-run guard, rejects edits that delete tests, and scans for secrets before running CI.
-- Runs CI profiles through sandbox runners (local, Docker, Firecracker placeholder) and enforces policy gates defined in `policies/security.yaml`.
+- Applies patches through `git apply` with a dry-run guard, rejects edits that delete tests, and scans for secrets (regex + TruffleHog/GitLeaks backends) before running CI.
+- Runs CI profiles through hardened sandbox runners (local process isolation, Docker with seccomp/AppArmor/read-only root, and Firecracker microVMs launched via `firectl`) while enforcing policy gates defined in `policies/security.yaml` and persisting security artifacts (SBOM, CVE, license reports).
 - Records PDCA entries for "Do -> Check -> Act", including CI summaries, policy outcomes, and a consolidated `artifacts/executor_summary.json`.
 
 ### Reward Engine (`aurora.reward`)
@@ -56,16 +56,16 @@ All stages append to `telemetry/pdca.jsonl`, ensuring the operations team can re
 
 ## Security and Isolation Baseline
 
-- Local sandbox is hardened with secret scanning, policy enforcement, and test-deletion guards.
-- Docker sandbox (Phase 1 target) will add mount controls and optional network isolation.
-- Firecracker sandbox currently logs a warning (Phase 1 upgrade) but enforces the same policy and secret checks.
+- Local sandbox is primarily used for development loops; production profiles rely on container or microVM isolation.
+- Docker sandbox runs with a read-only root filesystem, controlled mount list, seccomp profile, optional AppArmor confinement, and CPU/memory quotas.
+- Firecracker sandbox launches disposable microVMs via `firectl`, copies workspace snapshots, and honours network egress policy (tap devices only when explicitly enabled).
 
 ## Dependencies
 
 - Python 3.11 runtime with Typer CLI.
 - Tree-sitter bindings plus pgvector / SQLite for repository intelligence.
 - Optional Neo4j, Prometheus, Grafana, and OTEL collector for advanced deployments.
-- Security tooling (Bandit, Semgrep, Grype) referenced in CI profiles and policies.
+- Security tooling (Bandit, Semgrep, Syft, Grype, Pip-Licenses) referenced in CI profiles and policies.
 
 This architecture baseline will evolve in later phases (sandbox hardening, telemetry multi-tenancy, federated learning). Updates should be reflected here and cross-referenced from `docs/phase_plan.md` and `plan.md`.
 

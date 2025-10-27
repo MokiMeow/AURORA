@@ -3,10 +3,18 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import yaml
 
-from .config import CIPipelineStep, CIProfile, ExecutorConfig, FirecrackerConfig, SandboxPolicies
+from .config import (
+    CIPipelineStep,
+    CIProfile,
+    DockerConfig,
+    ExecutorConfig,
+    FirecrackerConfig,
+    SandboxPolicies,
+)
 
 
 def load_executor_config(workspace: Path, config_path: Path) -> ExecutorConfig:
@@ -42,14 +50,43 @@ def load_executor_config(workspace: Path, config_path: Path) -> ExecutorConfig:
     firecracker_cfg = None
     fc_opt = sandbox_cfg.get("options", {}).get("firecracker")
     if fc_opt and fc_opt.get("enabled", False):
+        resources = fc_opt.get("resources", {})
+        network_cfg = fc_opt.get("network")
+        snapshot_dir = fc_opt.get("snapshot_dir")
         firecracker_cfg = FirecrackerConfig(
             kernel_image=Path(fc_opt["kernel_image"]),
             rootfs_image=Path(fc_opt["rootfs"]),
+            resources=resources or None,
+            network=network_cfg or None,
+            snapshot_dir=Path(snapshot_dir) if snapshot_dir else None,
+            firecracker_bin=fc_opt.get("firecracker_bin", "firecracker"),
+            firectl_bin=fc_opt.get("firectl_bin", "firectl"),
         )
     policies_cfg = sandbox_cfg.get("policies", {})
     sandbox_policies = SandboxPolicies(
         egress_allowed=policies_cfg.get("egress", False),
         storage_mounts=policies_cfg.get("storage_mounts", []),
+        allowlist=policies_cfg.get("allowlist"),
+    )
+    docker_mount_entries: list[dict[str, object]] = []
+    for mount in docker_cfg.get("mounts", []):
+        source = Path(mount["source"])
+        if not source.is_absolute():
+            source = workspace / source
+        docker_mount_entries.append(
+            {"source": str(source), "target": mount["target"], "readonly": mount.get("readonly", True)}
+        )
+    docker_config = DockerConfig(
+        image=docker_cfg.get("image", "aurora-se/runtime:latest"),
+        mounts=docker_mount_entries,
+        env=docker_cfg.get("env"),
+        network=docker_cfg.get("network"),
+        seccomp_profile=Path(docker_cfg["seccomp_profile"]) if docker_cfg.get("seccomp_profile") else None,
+        apparmor_profile=docker_cfg.get("apparmor_profile"),
+        cpu_limit=_maybe_float(docker_cfg.get("cpu_limit")),
+        memory_limit=docker_cfg.get("memory_limit"),
+        read_only_root=docker_cfg.get("read_only_root", True),
+        additional_args=tuple(docker_cfg.get("args", [])),
     )
     return ExecutorConfig(
         workspace=workspace,
@@ -57,10 +94,17 @@ def load_executor_config(workspace: Path, config_path: Path) -> ExecutorConfig:
         sandbox=default_runtime,
         artifacts_dir=workspace / "artifacts",
         policy_path=Path(data.get("policy_path", "policies/security.yaml")),
-        docker_image=docker_cfg.get("image"),
-        docker_env=docker_cfg.get("env"),
-        docker_mounts=docker_cfg.get("mounts"),
+        docker=docker_config,
         firecracker_config=firecracker_cfg,
         sandbox_policies=sandbox_policies,
     )
+
+
+def _maybe_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 

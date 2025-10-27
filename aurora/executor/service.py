@@ -46,6 +46,7 @@ class ExecutorService:
         if not edit_path.exists():
             raise FileNotFoundError(f"Edit file {edit_path} does not exist")
         self_edit = SelfEdit.model_validate_json(edit_path.read_text(encoding="utf-8"))
+        self._config.artifacts_dir.mkdir(parents=True, exist_ok=True)
         PDCAEntry(phase="Do", event="start", payload={"intent": self_edit.intent, "profile": profile})
         try:
             self._apply_patches(self_edit.patches)
@@ -74,7 +75,8 @@ class ExecutorService:
             event="ci_results",
             payload={"profile": profile, "results": ci_payload, "diff": summary},
         )
-        policy_result = self._policy_evaluator.evaluate(ci_payload)
+        policy_metadata = self._collect_policy_metadata()
+        policy_result = self._policy_evaluator.evaluate(ci_payload, policy_metadata)
         if not policy_result.accepted:
             PDCAEntry(phase="Act", event="policy_reject", payload={"reasons": policy_result.reasons})
             self._fatal_failures += 1
@@ -116,4 +118,21 @@ class ExecutorService:
         self._error_log.parent.mkdir(parents=True, exist_ok=True)
         with self._error_log.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(record) + "\n")
+
+    def _collect_policy_metadata(self) -> dict[str, Any]:
+        artifacts = self._config.artifacts_dir
+        metadata: dict[str, Any] = {}
+        for name, filename in (
+            ("sbom", "sbom.json"),
+            ("cve_report", "cve_report.json"),
+            ("license_report", "license_report.json"),
+        ):
+            path = artifacts / filename
+            if path.exists():
+                try:
+                    metadata[name] = json.loads(path.read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    metadata[name] = {"error": "invalid_json"}
+        metadata["artifacts_dir"] = str(artifacts)
+        return metadata
 

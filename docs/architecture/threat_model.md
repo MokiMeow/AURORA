@@ -1,6 +1,6 @@
-# Aurora-SE Threat Model (Phase 0 Baseline)
+# Aurora-SE Threat Model (Phase 1 Baseline)
 
-This document summarizes the threat analysis completed during Phase 0. The scope covers local developer environments running the Aurora-SE CLI with optional Docker Compose services.
+This document summarizes the threat analysis after the Phase 1 sandbox & security hardening. The scope covers local developer environments running the Aurora-SE CLI with optional Docker Compose services and the hardened Docker/Firecracker runtimes.
 
 ## Assets and Trust Boundaries
 
@@ -33,7 +33,7 @@ Trust boundaries exist between:
 
 ### Information Disclosure
 - **Risk:** Secrets or proprietary code leaks through planner prompts or telemetry exports.
-- **Mitigation:** Planner redaction uses configurable regex patterns, executor secret scanning halts runs on detection, telemetry exports are opt-in and default to local storage only.
+- **Mitigation:** Planner redaction uses configurable regex patterns; executor secret scanning now chains regex detection with TruffleHog/GitLeaks and path allow-lists; telemetry exports remain opt-in and default to local storage only.
 
 ### Denial of Service
 - **Risk:** Long-running CI steps, runaway planners, or external API outages stall the loop.
@@ -41,20 +41,20 @@ Trust boundaries exist between:
 
 ### Elevation of Privilege
 - **Risk:** Code executed inside the sandbox escapes to the host.
-- **Mitigation:** Local sandbox uses least-privilege execution; Phase 1 will introduce hardened Docker and Firecracker profiles (seccomp, read-only mounts, network isolation).
+- **Mitigation:** Docker runtime enforces read-only root, curated mounts, seccomp, optional AppArmor, and CPU/memory quotas. Firecracker sandbox launches disposable microVMs via `firectl`, copies workspace snapshots, and only enables tap devices when egress is allowed.
 
-## Residual Risks (Phase 0)
+## Residual Risks (Phase 1)
 
-- Firecracker runner operates in passthrough mode; hardening is tracked for Phase 1.
-- Model provider authentication depends on environment variables; secret rotation automation is pending.
-- Telemetry exports to remote collectors require manual configuration and review.
+- Firecracker relies on host tooling (`firectl`/`firecracker`); continuous integration must validate binary provenance.
+- Model provider authentication still depends on operator-managed environment variables; secret rotation automation is pending.
+- Incident response playbooks for sandbox breakout detection need to be exercised with real alerts.
+- Signed artifact verification and supply-chain attestations remain future work.
 
 ## Next Steps
 
-1. Harden Firecracker/Docker isolation (Phase 1).
-2. Add signed artifact verification in executor policy checks.
-3. Implement secret scanning allow/deny lists synchronized with governance policy decisions.
-4. Integrate incident response runbooks with telemetry alerting.
+1. Automate signed artifact verification in executor and governance flow.
+2. Expand incident response runbooks with telemetry-driven alerting drills.
+3. Add automated rootfs attestation for Firecracker snapshots.
+4. Integrate remote telemetry exporters with per-tenant encryption at rest.
 
 This threat model should be revisited at the end of every major phase or when new integrations (cloud sandboxes, managed telemetry backends, federation peers) are introduced.
-

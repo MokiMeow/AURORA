@@ -4,12 +4,36 @@ runtime:
     docker:
       image: aurora-se/runtime:latest
       network: none
-      cpu_limit: 8
-      memory_limit: 16g
+      cpu_limit: 4
+      memory_limit: 8g
+      seccomp_profile: configs/seccomp/docker-default.json
+      apparmor_profile: aurora-default
+      read_only_root: true
+      env:
+        AURORA_MODE: ci
+      mounts:
+        - source: .
+          target: /workspace
+          readonly: false
+        - source: artifacts
+          target: /artifacts
+          readonly: false
+      args:
+        - --tmpfs
+        - /tmp
     firecracker:
-      enabled: false
+      enabled: true
       kernel_image: artifacts/kernel.bin
       rootfs: artifacts/rootfs.ext4
+      firecracker_bin: firecracker
+      firectl_bin: firectl
+      snapshot_dir: artifacts/microvms
+      resources:
+        vcpu_count: 2
+        memory_mib: 1024
+      network:
+        tap_device: tap0
+        mac_address: AA:FC:00:00:00:02
 
 policies:
   egress: false
@@ -20,4 +44,5 @@ policies:
     - name: artifacts
       path: /artifacts
       readonly: false
-
+  allowlist:
+    - scripts/**
