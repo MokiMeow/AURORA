@@ -15,4 +15,9 @@ critic_stack:
 retry_policy:
   max_attempts: 3
   backoff_seconds: 5
+secret_redaction:
+  enabled: true
+  patterns:
+    - (?i)api[_-]?key[:=]\s*[A-Za-z0-9]{32,}
+    - (?i)secret[:=]\s*[A-Za-z0-9+/]{24,}
 

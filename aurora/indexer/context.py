@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Iterable, Protocol
 
 from .store import GraphStore
-from .embedding import EmbeddingStore, EmbeddingRecord
+from .embedding import EmbeddingStore
 
 
 @dataclass(slots=True)
@@ -64,47 +64,6 @@ class ContextPacker:
         seen = set()
         for slice_ in slices:
             if slice_.path in seen or not slice_.path:
-                continue
-            deduped.append(slice_)
-            seen.add(slice_.path)
-            if len(deduped) >= self._limit:
-                break
-        return deduped
-"""Context packer for combining graph and embedding retrieval."""
-
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Callable, Iterable, List
-
-
-@dataclass(slots=True)
-class ContextSlice:
-    path: str
-    summary: str
-    score: float
-
-
-Strategy = Callable[[str], Iterable[ContextSlice]]
-
-
-class ContextPacker:
-    def __init__(self, limit: int = 20) -> None:
-        self._strategies: list[Strategy] = []
-        self._limit = limit
-
-    def register_strategy(self, strategy: Strategy) -> None:
-        self._strategies.append(strategy)
-
-    def build_context(self, query: str) -> list[ContextSlice]:
-        slices: List[ContextSlice] = []
-        for strategy in self._strategies:
-            slices.extend(strategy(query))
-        slices.sort(key=lambda s: s.score, reverse=True)
-        deduped: list[ContextSlice] = []
-        seen = set()
-        for slice_ in slices:
-            if slice_.path in seen:
                 continue
             deduped.append(slice_)
             seen.add(slice_.path)

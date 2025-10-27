@@ -13,7 +13,8 @@ from aurora.indexer.store import GraphStore
 from aurora.indexer.tree import TreeSitterParser
 from aurora.indexer.embedding import EmbeddingStore
 from aurora.indexer.service import IndexJobConfig, IndexerService
-from aurora.planner.service import PlannerConfig, PlannerService
+from aurora.planner.service import PlannerService
+from aurora.planner.config_loader import load_planner_config
 
 
 app = typer.Typer(help="AURORA-SE command-line interface")
@@ -59,21 +60,20 @@ def plan(
     task: str = typer.Option(..., "--task"),
     auto: bool = typer.Option(False, "--auto"),
     critic: bool = typer.Option(False, "--critic"),
-    endpoint: str = typer.Option("http://localhost:11434/api/generate", "--endpoint"),
-    model: str = typer.Option("deepseek-r1:7b", "--model"),
+    config_path: Path = typer.Option(Path("configs/model.yaml"), "--config", exists=True),
 ) -> None:
     """Generate a self-edit plan for the specified task."""
 
-    config = PlannerConfig(endpoint=endpoint, model=model, critic_endpoints=[])
-    service = PlannerService(config)
+    planner_service = PlannerService(
+        config_path=config_path,
+        graph_store=GraphStore("sqlite:///artifacts/index.db"),
+        embedding_store=EmbeddingStore(enabled=True, database_url="sqlite:///artifacts/index.db"),
+        experience_vault=None,
+    )
 
     async def _run() -> None:
-        self_edit = await service.generate_self_edit(task=task, auto=auto, critic=critic)
-        output_dir = Path("artifacts")
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = output_dir / "self_edit.json"
-        output_path.write_text(self_edit.model_dump_json(indent=2))
-        typer.echo(f"Self-edit plan saved to {output_path}")
+        self_edit = await planner_service.generate_self_edit(task=task, auto=auto, critic=critic)
+        typer.echo("Self-edit plan saved to artifacts/self_edit.json")
 
     asyncio.run(_run())
 
