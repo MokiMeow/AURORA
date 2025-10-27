@@ -15,17 +15,15 @@ from aurora.indexer.tree import TreeSitterParser
 from aurora.indexer.embedding import EmbeddingStore
 from aurora.indexer.service import IndexJobConfig, IndexerService
 from aurora.planner.service import PlannerService
-from aurora.planner.config_loader import load_planner_config
 from aurora.executor.config_loader import load_executor_config
 from aurora.executor import ExecutorService, CIOrchestrator, LocalSandbox
-from aurora.executor.sandbox import DockerSandbox
+from aurora.executor.sandbox import DockerSandbox, FirecrackerSandbox, SandboxRunner
 from aurora.security.secrets import SecretScanner, SecretScannerConfig
-from aurora.learn.config import TrainingConfig, HardwareConfig
+from aurora.executor.policy import PolicyEvaluator
 from aurora.learn.config_loader import load_training_config
 from aurora.learn.service import LearningService
 from aurora.eval.config_loader import load_evaluation_config
 from aurora.eval.service import EvaluationService
-from aurora.indexer.context import ContextPacker
 from aurora.learn.cli import list_adapters, sync_adapter, rollback_adapter
 from aurora.telemetry.service import TelemetryService
 
@@ -85,7 +83,7 @@ def plan(
     )
 
     async def _run() -> None:
-        self_edit = await planner_service.generate_self_edit(task=task, auto=auto, critic=critic)
+        await planner_service.generate_self_edit(task=task, auto=auto, critic=critic)
         typer.echo("Self-edit plan saved to artifacts/self_edit.json")
 
     asyncio.run(_run())
@@ -100,6 +98,7 @@ def apply(
     """Apply a self-edit inside sandbox and run CI profile."""
 
     config = load_executor_config(Path.cwd(), executor_config)
+    sandbox: SandboxRunner
     if config.sandbox == "docker":
         sandbox = DockerSandbox(
             image=config.docker_image or "aurora-se/executor:latest",
@@ -117,7 +116,13 @@ def apply(
         sandbox = LocalSandbox()
     ci_orchestrator = CIOrchestrator(sandbox=sandbox, artifacts_dir=Path("artifacts"))
     secret_scanner = SecretScanner(SecretScannerConfig(patterns=(r"secret",)))
-    executor = ExecutorService(config=config, ci_orchestrator=ci_orchestrator, secret_scanner=secret_scanner)
+    policy_evaluator = PolicyEvaluator(config.policy_path)
+    executor = ExecutorService(
+        config=config,
+        ci_orchestrator=ci_orchestrator,
+        secret_scanner=secret_scanner,
+        policy_evaluator=policy_evaluator,
+    )
     executor.apply(edit_path=edit, profile=profile)
     typer.echo("Executor run completed")
 

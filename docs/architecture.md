@@ -1,13 +1,12 @@
 # AURORA-SE Architecture
 
-This document describes the high-level architecture for AURORA-SE.
+This page now serves as an entry point to the expanded architecture documentation produced in Phase 0.
 
 ## Overview
 
-AURORA-SE implements a closed-loop PDCA cycle across planner, executor, reward, and learning subsystems. Each component emits telemetry and governance artifacts for traceability.
+- **Architecture Overview:** `docs/architecture/overview.md` details the end-to-end PDCA loop, major services, and data flows.
+- **Threat Model:** `docs/architecture/threat_model.md` captures the Phase 0 STRIDE assessment and residual risks.
+- **Phase Artifacts:** `plan.md` and `docs/phase_plan.md` remain the source of truth for sequencing and deliverables.
 
-### Phase 0 Components
-- Docker Compose stack orchestrates Ollama, Postgres+pgvector (with optional Milvus), MinIO, OTEL collector, and Grafana.
-- Sample monorepo under `examples/` used for indexing and CI dry-runs.
-- Baseline configs define language packs, model endpoints, sandbox policies, and telemetry routes.
+Use these documents together to understand how Aurora-SE is assembled today and what hardening work is planned for subsequent phases.
 

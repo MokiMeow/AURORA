@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Iterable, Protocol
-from pathlib import Path
 import json
+import hashlib
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Iterable, Protocol
 
-from .store import GraphStore
 from .embedding import EmbeddingStore
-from .graph import CodeGraph
+from .store import GraphStore
 
 
 @dataclass(slots=True)
@@ -20,7 +20,7 @@ class ContextSlice:
 
 
 class ExperienceVault(Protocol):
-    def iter_recent(self, limit: int = 20) -> Iterable[dict]:
+    def iter_recent(self, limit: int = 20) -> Iterable[Any]:
         ...
 
 
@@ -62,13 +62,8 @@ class ContextPacker:
 
         if self._experience_vault:
             for entry in self._experience_vault.iter_recent(limit=self._limit):
-                slices.append(
-                    ContextSlice(
-                        path=entry.get("path", ""),
-                        summary=entry.get("summary", "Experience vault record"),
-                        score=entry.get("score", 0.5),
-                    )
-                )
+                slices.append(self._slice_from_experience(entry))
+
         if self._swe_telemetry_path and self._swe_telemetry_path.exists():
             for item in json.loads(self._swe_telemetry_path.read_text(encoding="utf-8"))[: self._limit]:
                 slices.append(
@@ -98,4 +93,34 @@ class ContextPacker:
             if len(deduped) >= self._limit:
                 break
         return deduped
+
+    @staticmethod
+    def _slice_from_experience(entry: Any) -> ContextSlice:
+        if isinstance(entry, dict):
+            path = entry.get("path") or ""
+            summary = entry.get("summary", "Experience vault record")
+            score = float(entry.get("score", 0.5))
+            identifier = path or ContextPacker._stable_identifier(summary)
+            return ContextSlice(path=identifier, summary=summary, score=score)
+
+        summary = "Experience vault record"
+        path = ""
+        score = float(getattr(entry, "reward", 0.5))
+
+        edit = getattr(entry, "edit", None)
+        if isinstance(edit, dict):
+            summary = edit.get("summary", summary)
+            path = edit.get("path") or path
+
+        context = getattr(entry, "context", None)
+        if not summary and isinstance(context, dict):
+            summary = context.get("task", summary)
+
+        identifier = path or ContextPacker._stable_identifier(summary)
+        return ContextSlice(path=identifier, summary=summary or "Experience vault record", score=score)
+
+    @staticmethod
+    def _stable_identifier(summary: str) -> str:
+        digest = hashlib.sha1(summary.encode("utf-8")).hexdigest()[:12]
+        return f"experience:{digest}"
 

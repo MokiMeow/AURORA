@@ -1,6 +1,6 @@
 # AURORA-SE Production Readiness Phases
 
-This roadmap breaks the build-out into concrete, production-grade phases. Each phase delivers auditable, fully operational capabilities before advancing.
+This roadmap breaks the build-out into concrete, production-grade phases. Each phase delivers auditable, fully operational capabilities before advancing. For high-level goals, refer to `plan.md`, which now links back to this roadmap.
 
 ## Phase 0 – Foundation & Environment
 - Finalize repository scaffolding, deterministic dependency pinning, and virtual environment bootstrap.

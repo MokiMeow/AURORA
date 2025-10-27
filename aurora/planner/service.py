@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 from pathlib import Path
@@ -14,7 +13,7 @@ from ..context.experience import ExperienceVault
 from ..indexer.context_builder import build_context_packer
 from ..indexer.store import GraphStore
 from ..indexer.embedding import EmbeddingStore
-from .client import PlannerClient, PlannerResponse
+from .client import PlannerClient
 from .config_loader import load_planner_config
 from .schema import SelfEdit
 from .pdca import PDCAEntry
@@ -36,22 +35,22 @@ class PlannerService:
         self._config_path = config_path
         self._graph_store = graph_store
         self._embedding_store = embedding_store
+        self._config = load_planner_config(config_path)
         self._experience_vault = experience_vault or ExperienceVault(
             self._config.experience_config.path if self._config.experience_config else None
         )
-        self._config = load_planner_config(config_path)
         self._client = PlannerClient(self._config)
         self._context_packer = build_context_packer(
             graph_store=graph_store,
             embedding_store=embedding_store,
-            experience_vault=experience_vault,
+            experience_vault=self._experience_vault,
             limit=20,
             swe_telemetry_path=self._config.swe_telemetry_path,
             policy_notes=self._config.policy_notes,
         )
 
     async def generate_self_edit(self, task: str, auto: bool, critic: bool) -> SelfEdit:
-        PDCAEntry(phase="Plan", event="start", payload={"task": task, "auto": auto, "critic": critic}).write()
+        PDCAEntry(phase="Plan", event="start", payload={"task": task, "auto": auto, "critic": critic})
         context_slices = self._context_packer.build_context(task)
         experience_slices = []
         if self._config.experience_config:
@@ -67,7 +66,7 @@ class PlannerService:
         try:
             response = await self._client.generate(prompt)
         except Exception as exc:  # pragma: no cover
-            PDCAEntry(phase="Plan", event="error", payload={"task": task, "error": str(exc)}).write()
+            PDCAEntry(phase="Plan", event="error", payload={"task": task, "error": str(exc)})
             raise
         self._write_artifact("planner_output.txt", response.content)
         data = self._parse_response(response.content)
@@ -75,7 +74,7 @@ class PlannerService:
         if critic:
             await self._run_critics(self_edit)
         self._write_artifact("self_edit.json", self_edit.model_dump_json(indent=2))
-        PDCAEntry(phase="Plan", event="complete", payload={"task": task, "redacted": response.redacted}).write()
+        PDCAEntry(phase="Plan", event="complete", payload={"task": task, "redacted": response.redacted})
         return self_edit
 
     def _build_prompt(self, task: str, context: str, auto: bool) -> str:
@@ -118,7 +117,7 @@ class PlannerService:
             })
         artifact_path = ARTIFACTS_DIR / "critic_outputs.json"
         artifact_path.write_text(json.dumps(processed, indent=2))
-        PDCAEntry(phase="Plan", event="critic", payload={"results": processed}).write()
+        PDCAEntry(phase="Plan", event="critic", payload={"results": processed})
 
     @staticmethod
     def _write_artifact(filename: str, content: str) -> None:

@@ -7,11 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Iterator
 
-from tree_sitter import Language, Parser
-from tree_sitter_languages import get_parser, get_language
+from tree_sitter import Parser
+from tree_sitter_languages import get_language
 
 from .config import IndexerConfig, LanguageConfig
-from .graph import CodeGraph
 
 LOGGER = logging.getLogger(__name__)
 
@@ -127,9 +126,15 @@ class TreeSitterParser:
     ) -> list[str]:
         if not query_path.exists():
             return []
-        query = parser.language.query(query_path.read_text(encoding="utf-8"))
+        parser_language = getattr(parser, "language", None)
+        if parser_language is None:
+            raise AttributeError("Parser missing language configuration")
+        query = parser_language.query(query_path.read_text(encoding="utf-8"))  # type: ignore[call-arg]
         content_bytes = source.content.encode("utf-8")
-        matches = query.captures(tree.root_node)
+        root_node = getattr(tree, "root_node", None)
+        if root_node is None:
+            return []
+        matches = query.captures(root_node)
         results: list[str] = []
         for node, _ in matches:
             results.append(content_bytes[node.start_byte : node.end_byte].decode("utf-8"))

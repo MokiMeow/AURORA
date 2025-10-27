@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 
 @dataclass(slots=True)
@@ -32,8 +35,16 @@ class PolicyEvaluator:
                     reasons.append(f"Required step missing: {rule}")
         return PolicyResult(accepted=accepted, reasons=reasons)
 
-    def _load_policy(self) -> dict | None:
-        if self._policy_path and self._policy_path.exists():
-            return json.loads(self._policy_path.read_text(encoding="utf-8"))
-        return None
+    def _load_policy(self) -> dict[str, Any] | None:
+        if not self._policy_path or not self._policy_path.exists():
+            return None
+        text = self._policy_path.read_text(encoding="utf-8").strip()
+        if not text:
+            return {}
+        suffix = self._policy_path.suffix.lower()
+        if suffix in {".yaml", ".yml"}:
+            data = yaml.safe_load(text)
+        else:
+            data = json.loads(text)
+        return data or {}
 

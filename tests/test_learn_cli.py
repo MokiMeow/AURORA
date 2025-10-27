@@ -3,8 +3,6 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from aurora.learn.cli import list_adapters, sync_adapter, rollback_adapter
 from aurora.learn.registry import AdapterRegistry, AdapterInfo
 

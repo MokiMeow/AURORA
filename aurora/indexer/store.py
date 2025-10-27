@@ -7,7 +7,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Iterable, Iterator
 
-from neo4j import GraphDatabase
+from neo4j import Driver, GraphDatabase
 
 from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine, delete, select
 from sqlalchemy.engine import Engine
@@ -15,7 +15,6 @@ from sqlalchemy.sql import insert
 
 from .tree import ParsedUnit
 from .graph import CodeGraph
-from .config import IndexerConfig
 
 metadata = MetaData()
 
@@ -54,7 +53,7 @@ class GraphStore:
     neo4j_url: str | None = None
     neo4j_user: str | None = None
     neo4j_password: str | None = None
-    _neo4j_driver: GraphDatabase | None = field(init=False, default=None)
+    _neo4j_driver: Driver | None = field(init=False, default=None)
     _engine: Engine | None = field(init=False, default=None)
 
     def __post_init__(self) -> None:
@@ -78,7 +77,8 @@ class GraphStore:
                 graph.add_edge(str(unit.path), target, "import")
             for call in unit.calls:
                 graph.add_edge(str(unit.path), call, "call")
-        with self._engine.begin() as connection:
+        engine = self._get_engine()
+        with engine.begin() as connection:
             if full:
                 connection.execute(delete(edges_table))
                 connection.execute(delete(files_table))
@@ -114,7 +114,8 @@ class GraphStore:
         return changed_paths
 
     def find_symbols(self, term: str, limit: int = 10) -> list[str]:
-        with self._engine.begin() as connection:
+        engine = self._get_engine()
+        with engine.begin() as connection:
             rows = connection.execute(select(files_table.c.path, files_table.c.symbols)).fetchall()
         matches: list[str] = []
         for path, symbols_json in rows:
@@ -125,24 +126,29 @@ class GraphStore:
                     break
         return matches
 
-    def neighbors(self, path: str, limit: int = 10) -> list[str]:
-        with self._engine.begin() as connection:
-            rows = connection.execute(
+    def neighbors(self, path: str, kind: str | None = None, limit: int = 10) -> list[str]:
+        engine = self._get_engine()
+        with engine.begin() as connection:
+            query = (
                 select(edges_table.c.target)
                 .where(edges_table.c.source == path)
                 .limit(limit)
-            ).fetchall()
+            )
+            if kind:
+                query = query.where(edges_table.c.kind == kind)
+            rows = connection.execute(query).fetchall()
         return [row[0] for row in rows]
 
     def list_files(self) -> Iterator[dict]:
-        with self._engine.begin() as connection:
+        engine = self._get_engine()
+        with engine.begin() as connection:
             result = connection.execute(select(files_table)).mappings()
             for row in result:
                 yield dict(row)
 
     @property
     def engine(self) -> Engine:
-        return self._engine
+        return self._get_engine()
 
     @staticmethod
     def _load_hashes(connection) -> dict[str, str]:
@@ -150,9 +156,10 @@ class GraphStore:
         return {path: content_hash for path, content_hash in rows}
 
     def _persist_neo4j(self, graph: CodeGraph, full: bool) -> None:
-        if not self._neo4j_driver:
+        driver = self._neo4j_driver
+        if not driver:
             return
-        with self._neo4j_driver.session() as session:
+        with driver.session() as session:
             if full:
                 session.run("MATCH (n) DETACH DELETE n")
             for node in graph.nodes.values():
@@ -170,4 +177,9 @@ class GraphStore:
                     source=edge.source,
                     target=edge.target,
                 )
+
+    def _get_engine(self) -> Engine:
+        if self._engine is None:
+            raise RuntimeError("GraphStore engine is not initialized")
+        return self._engine
 

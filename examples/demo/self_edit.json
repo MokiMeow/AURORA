@@ -1,0 +1,34 @@
+{
+  "intent": "bugfix",
+  "summary": "Fix calculator add returning subtraction",
+  "plan": [
+    "Inspect pycalc/calc.py add function",
+    "Update add to return sum",
+    "Add regression test"
+  ],
+  "graph_targets": [
+    "pycalc.calc.add"
+  ],
+  "patches": [
+    {
+      "path": "examples/demo/pycalc/calc.py",
+      "diff": "@@\n-def add(a: int, b: int) -> int:\n-    \"\"\"Return the sum of two integers.\"\"\"\n-    return a - b  # intentional bug for demo\n+def add(a: int, b: int) -> int:\n+    \"\"\"Return the sum of two integers.\"\"\"\n+    return a + b\n"
+    }
+  ],
+  "tests": [
+    {
+      "path": "examples/demo/tests/test_calc.py",
+      "content": "from pycalc import add\n\n\ndef test_add_returns_sum():\n    assert add(2, 3) == 5\n    assert add(-1, 1) == 0\n"
+    }
+  ],
+  "tools": {
+    "lint": {},
+    "typecheck": {},
+    "static_analysis": {},
+    "fuzz": {},
+    "perf": {}
+  },
+  "train": {"enable": false},
+  "acceptance": {"min_R": 0.0, "security_zero_criticals": true}
+}
+

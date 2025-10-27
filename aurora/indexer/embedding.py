@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass
-from typing import Iterable, List
+from typing import Iterable
 
 from sqlalchemy import Column, MetaData, String, Table, create_engine, insert, select
 from sqlalchemy.engine import Engine

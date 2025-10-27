@@ -8,7 +8,6 @@ import random
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from .dataset import load_training_samples, compute_bias_score, DatasetError
 

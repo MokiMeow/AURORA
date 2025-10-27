@@ -104,7 +104,7 @@ class EvaluationService:
 
     def _compute_metrics(self, raw_result: dict[str, Any]) -> dict[str, Any]:
         stdout = raw_result.get("stdout", "")
-        metrics = {}
+        metrics: dict[str, Any] = {}
         for line in stdout.splitlines():
             if line.startswith("METRIC:"):
                 try:

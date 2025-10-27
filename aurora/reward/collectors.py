@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, List, Dict
+from typing import Any, Iterable
 
 
 @dataclass(slots=True)
@@ -32,16 +32,40 @@ class MetricCollector:
     def history(self) -> Iterable[MetricSnapshot]:
         return tuple(self._history)
 
-    def from_ci_results(self, results: List[Dict[str, object]]) -> MetricSnapshot:
-        tests_passed = sum(1 for r in results if r["success"] and "test" in r["step"])
-        coverage_delta = 0.1 if any("coverage" in r["step"] and r["success"] for r in results) else 0.0
-        perf_delta = 0.1 if any("perf" in r["step"] or "k6" in r["step"] for r in results if r["success"]) else 0.0
-        security_failures = [r for r in results if not r["success"] and any(keyword in r["step"] for keyword in {"security", "cve", "sbom", "license", "bandit", "semgrep"})]
+    def from_ci_results(self, results: list[dict[str, Any]]) -> MetricSnapshot:
+        tests_passed = sum(
+            1
+            for r in results
+            if bool(r.get("success")) and "test" in str(r.get("step", ""))
+        )
+        coverage_delta = (
+            0.1
+            if any("coverage" in str(r.get("step", "")) and bool(r.get("success")) for r in results)
+            else 0.0
+        )
+        perf_delta = (
+            0.1
+            if any(
+                bool(r.get("success"))
+                and ("perf" in str(r.get("step", "")) or "k6" in str(r.get("step", "")))
+                for r in results
+            )
+            else 0.0
+        )
+        security_failures = [
+            r
+            for r in results
+            if not bool(r.get("success"))
+            and any(
+                keyword in str(r.get("step", "")).lower()
+                for keyword in {"security", "cve", "sbom", "license", "bandit", "semgrep"}
+            )
+        ]
         security_score = 1.0 if not security_failures else 0.0
         complexity_delta = 0.0
-        policy_bonus = 0.1 if all(r["success"] for r in results) else 0.0
+        policy_bonus = 0.1 if all(bool(r.get("success")) for r in results) else 0.0
         bias_score = 0.0
-        if any("bias" in r["step"] for r in results):
+        if any("bias" in str(r.get("step", "")).lower() for r in results):
             bias_score = 0.06
         snapshot = MetricSnapshot(
             tests_passed=float(tests_passed),

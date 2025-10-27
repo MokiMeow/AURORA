@@ -2,10 +2,9 @@
 
 from pathlib import Path
 
-from aurora.executor.service import ExecutorService, PatchApplicationError
-from aurora.executor.config import ExecutorConfig, CIProfile, CIPipelineStep
+from aurora.executor.service import ExecutorService
+from aurora.executor.config import ExecutorConfig, CIProfile
 from aurora.executor.ci import CIOrchestrator
-from aurora.executor.sandbox import LocalSandbox
 from aurora.executor.policy import PolicyEvaluator
 from aurora.security.secrets import SecretScanner, SecretScannerConfig
 

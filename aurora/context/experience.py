@@ -45,3 +45,9 @@ class ExperienceVault:
                 break
         return results
 
+    def iter_recent(self, limit: int = 20) -> list[ExperienceRecord]:
+        records = self.iter_records()
+        if not records:
+            return []
+        return list(reversed(records))[:limit]
+

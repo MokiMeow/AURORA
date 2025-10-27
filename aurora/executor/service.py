@@ -4,15 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
-import shutil
-import subprocess
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 
 from ..planner.schema import SelfEdit
 from ..security.secrets import SecretScanner
-from .patch import apply as apply_patch, dry_run as dry_run_patch, rollback as rollback_patch, diff_summary, detect_test_deletions, PatchError
+from .patch import apply as apply_patch, dry_run as dry_run_patch, diff_summary, detect_test_deletions
 from ..planner.pdca import PDCAEntry
 from .ci import CIOrchestrator
 from .config import ExecutorConfig
@@ -87,9 +84,12 @@ class ExecutorService:
         summary_path.write_text(json.dumps({"ci_results": ci_payload, "policy": policy_result.reasons}, indent=2))
         PDCAEntry(phase="Act", event="completed", payload={"profile": profile})
 
-    def _apply_patches(self, patches: Iterable[dict]) -> None:
+    def _apply_patches(self, patches: Iterable[Any]) -> None:
         for patch in patches:
-            diff = patch["diff"]
+            if isinstance(patch, dict):
+                diff = patch["diff"]
+            else:
+                diff = getattr(patch, "diff")
             dry_run_patch(diff, self._config.workspace)
             deletions = detect_test_deletions(diff)
             if deletions:

@@ -3,8 +3,6 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from aurora.eval.config import EvaluationConfig, SuiteConfig
 from aurora.eval.service import EvaluationService
 

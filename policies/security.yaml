@@ -11,6 +11,6 @@ dependency_rules:
     categories:
       - security
 required_steps:
-  - k6
-  - grype
+  - chaos_smoke
+  - grype_scan
 

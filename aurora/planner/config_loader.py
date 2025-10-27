@@ -41,11 +41,16 @@ def load_planner_config(path: Path) -> PlannerConfig:
             path=Path(data["experience"]["path"]),
             limit=data["experience"].get("limit", 5),
         )
+    swe_path = Path(data["swe_telemetry_path"]) if data.get("swe_telemetry_path") else None
+    raw_policy_notes = data.get("policy_notes", [])
+    policy_notes = tuple(note for note in raw_policy_notes if isinstance(note, dict))
     return PlannerConfig(
         primary=primary,
         critics=critics,
         retry_policy=retry_policy,
         secret_redaction=redaction,
         experience_config=experience,
+        swe_telemetry_path=swe_path,
+        policy_notes=policy_notes,
     )
 

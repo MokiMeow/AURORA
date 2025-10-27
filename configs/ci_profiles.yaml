@@ -2,7 +2,7 @@ profiles:
   fast:
     steps:
       - name: lint
-        command: ["npm", "run", "lint"]
+        command: ["ruff", "check", "."]
       - name: unit
         command: ["pytest"]
       - name: bandit
@@ -15,11 +15,11 @@ profiles:
     extends: fast
     steps:
       - name: typecheck
-        command: ["mypy", "aurora"]
+        command: ["mypy", "aurora", "cli"]
       - name: coverage
-        command: ["pytest", "--cov=aurora"]
-      - name: k6_smoke
-        command: ["k6", "run", "configs/perf/smoke.js"]
+        command: ["pytest", "--cov=aurora", "--cov=cli"]
+      - name: chaos_smoke
+        command: ["bash", "scripts/chaos_tests.sh"]
       - name: sbom_diff
         command: ["bash", "scripts/sbom_diff.sh"]
     timeout_minutes: 45
@@ -27,10 +27,10 @@ profiles:
   thorough:
     extends: balanced
     steps:
+      - name: autopilot_dry_run
+        command: ["bash", "scripts/end_to_end_dry_run.sh"]
       - name: fuzz
-        command: ["python", "scripts/run_fuzz.py"]
-      - name: k6_endurance
-        command: ["k6", "run", "configs/perf/endurance.js"]
+        command: ["python", "scripts/fuzz_tests.py"]
       - name: dependency_audit
         command: ["bash", "scripts/dependency_audit.sh"]
       - name: license_scan

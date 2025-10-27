@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Sequence
 from pathlib import Path
+from typing import Any
 
 
 @dataclass(slots=True)
@@ -48,4 +48,6 @@ class PlannerConfig:
     retry_policy: RetryPolicy
     secret_redaction: SecretRedaction
     experience_config: ExperienceConfig | None = None
+    swe_telemetry_path: Path | None = None
+    policy_notes: tuple[dict[str, Any], ...] = ()
 
