@@ -1,0 +1,13 @@
+peers:
+  - name: primary-hub
+    endpoint: https://aurora-hub.example.com
+    public_key: ${AURORA_HUB_PUBLIC_KEY}
+policies:
+  enforcement: policies/security.yaml
+  bias_threshold: 0.1
+  licenses: policies/license.yaml
+encryption:
+  enabled: true
+  method: age
+  key_path: secrets/federation_key.txt
+

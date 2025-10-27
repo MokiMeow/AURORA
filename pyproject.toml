@@ -57,6 +57,13 @@ dev = [
   "ruff>=0.6",
   "mypy>=1.10"
 ]
+learn = [
+  "transformers>=4.45",
+  "datasets>=2.19",
+  "peft>=0.11",
+  "accelerate>=0.33",
+  "evaluate>=0.4"
+]
 
 [project.scripts]
 "aurora-se" = "cli.main:entrypoint"

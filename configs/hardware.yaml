@@ -10,3 +10,7 @@ inference:
     max_batch_size: 1
     timeout_seconds: 120
 
+firecracker:
+  kernel_image: artifacts/kernel.bin
+  rootfs_image: artifacts/rootfs.ext4
+

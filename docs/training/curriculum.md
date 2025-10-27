@@ -7,3 +7,7 @@
 5. Governance bundle generation and compliance.
 6. Adapter training workflow and bias mitigation.
 
+## Bias Audit
+
+Refer to `bias_audit.md` for nightly bias scoring procedures, remediation workflow, and reporting obligations. Trainees must review generated reports weekly and practice documenting remediation steps for over-threshold adapters.
+

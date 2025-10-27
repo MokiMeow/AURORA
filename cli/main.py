@@ -21,11 +21,12 @@ from aurora.executor import ExecutorService, CIOrchestrator, LocalSandbox
 from aurora.executor.sandbox import DockerSandbox
 from aurora.security.secrets import SecretScanner, SecretScannerConfig
 from aurora.learn.config import TrainingConfig, HardwareConfig
+from aurora.learn.config_loader import load_training_config
 from aurora.learn.service import LearningService
 from aurora.eval.config_loader import load_evaluation_config
 from aurora.eval.service import EvaluationService
 from aurora.indexer.context import ContextPacker
-from aurora.learn.cli import list_adapters
+from aurora.learn.cli import list_adapters, sync_adapter, rollback_adapter
 
 
 app = typer.Typer(help="AURORA-SE command-line interface")
@@ -123,19 +124,14 @@ def apply(
 @app.command()
 def learn(
     nightly: bool = typer.Option(False, "--nightly"),
-    gpu: str = typer.Option("auto", "--gpu"),
+    config_path: Path = typer.Option(Path("configs/learn.yaml"), "--config", exists=True),
+    federated: bool = typer.Option(False, "--federated"),
 ) -> None:
     """Run adapter learning pipeline."""
 
-    config = TrainingConfig(
-        adapters_path=Path("adapters"),
-        data_path=Path("artifacts"),
-        base_model="base-model",
-        output_adapter=Path("adapters") / "default" / "latest",
-        hardware=HardwareConfig(gpu_memory_gb=24, fallback_mode="cpu", precision="8bit"),
-    )
+    config = load_training_config(Path.cwd(), config_path)
     service = LearningService(config)
-    service.run(nightly=nightly)
+    service.run(nightly=nightly, federated=federated)
     typer.echo("Learning pipeline triggered")
 
 
@@ -146,6 +142,16 @@ def adapters(command: str = typer.Argument(...), path: Path = typer.Option(Path(
     if command == "list":
         adapters = list_adapters(path)
         typer.echo(json.dumps(adapters, indent=2))
+    elif command == "sync":
+        name = typer.prompt("Adapter name")
+        version = typer.prompt("Adapter version")
+        metadata = sync_adapter(path, name, version, Path("configs/federation.yaml"))
+        typer.echo(json.dumps(metadata, indent=2))
+    elif command == "rollback":
+        name = typer.prompt("Adapter name")
+        version = typer.prompt("Adapter version")
+        resolved = rollback_adapter(path, name, version)
+        typer.echo(f"Set active adapter to {resolved}")
     else:
         raise typer.BadParameter("Unsupported adapters command")
 
