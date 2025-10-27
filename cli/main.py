@@ -15,6 +15,10 @@ from aurora.indexer.embedding import EmbeddingStore
 from aurora.indexer.service import IndexJobConfig, IndexerService
 from aurora.planner.service import PlannerService
 from aurora.planner.config_loader import load_planner_config
+from aurora.executor.config_loader import load_executor_config
+from aurora.executor import ExecutorService, CIOrchestrator, LocalSandbox
+from aurora.security.secrets import SecretScanner, SecretScannerConfig
+from aurora.indexer.context import ContextPacker
 
 
 app = typer.Typer(help="AURORA-SE command-line interface")
@@ -76,6 +80,23 @@ def plan(
         typer.echo("Self-edit plan saved to artifacts/self_edit.json")
 
     asyncio.run(_run())
+
+
+@app.command()
+def apply(
+    edit: Path = typer.Option(Path("artifacts/self_edit.json"), "--edit", exists=True),
+    profile: str = typer.Option("fast", "--profile"),
+    executor_config: Path = typer.Option(Path("configs/ci_profiles.yaml"), "--ci-config", exists=True),
+) -> None:
+    """Apply a self-edit inside sandbox and run CI profile."""
+
+    config = load_executor_config(Path.cwd(), executor_config)
+    sandbox = LocalSandbox()
+    ci_orchestrator = CIOrchestrator(sandbox=sandbox, artifacts_dir=Path("artifacts"))
+    secret_scanner = SecretScanner(SecretScannerConfig(patterns=(r"secret",)))
+    executor = ExecutorService(config=config, ci_orchestrator=ci_orchestrator, secret_scanner=secret_scanner)
+    executor.apply(edit_path=edit, profile=profile)
+    typer.echo("Executor run completed")
 
 
 def entrypoint() -> None:

@@ -1,33 +1,90 @@
-"""Executor service for applying self-edits within sandboxed environments."""
+"""Executor service responsible for applying self-edits and running CI."""
 
 from __future__ import annotations
 
+import json
+import logging
+import shutil
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Iterable
+
+from ..planner.schema import SelfEdit
+from ..security.secrets import SecretScanner
+from ..planner.pdca import PDCAEntry
+from .ci import CIOrchestrator
+from .config import ExecutorConfig
+from .policy import PolicyEvaluator
+
+LOGGER = logging.getLogger(__name__)
 
 
-class SandboxRunner(Protocol):
-    def run(self, command: list[str], workdir: Path | None = None) -> int:  # pragma: no cover
-        """Execute a command within the sandbox and return exit code."""
-
-
-@dataclass(slots=True)
-class ExecutionConfig:
-    sandbox: SandboxRunner
-    profile: str
-    workspace: Path
+class PatchApplicationError(RuntimeError):
+    """Raised when patch application fails."""
 
 
 class ExecutorService:
-    def __init__(self, config: ExecutionConfig) -> None:
+    def __init__(
+        self,
+        config: ExecutorConfig,
+        ci_orchestrator: CIOrchestrator,
+        secret_scanner: SecretScanner,
+        policy_evaluator: PolicyEvaluator,
+    ) -> None:
         self._config = config
+        self._ci_orchestrator = ci_orchestrator
+        self._secret_scanner = secret_scanner
+        self._policy_evaluator = policy_evaluator
 
-    def apply(self, edit_path: Path) -> None:
+    def apply(self, edit_path: Path, profile: str) -> None:
         if not edit_path.exists():
-            msg = f"Edit file {edit_path} does not exist"
-            raise FileNotFoundError(msg)
-        # TODO: integrate patch application, CI orchestration, reward calculation.
-        # Placeholder call to sandbox runner to demonstrate interface.
-        self._config.sandbox.run(["echo", "Applying self-edit"], workdir=self._config.workspace)
+            raise FileNotFoundError(f"Edit file {edit_path} does not exist")
+        self_edit = SelfEdit.model_validate_json(edit_path.read_text(encoding="utf-8"))
+        PDCAEntry(phase="Do", event="start", payload={"intent": self_edit.intent, "profile": profile}).write()
+        self._apply_patches(self_edit.patches)
+        self._scan_for_secrets()
+        results = self._run_ci(profile)
+        ci_payload = [
+            {"step": result.step, "success": result.success, "log": str(result.output_path)}
+            for result in results
+        ]
+        PDCAEntry(
+            phase="Check",
+            event="ci_results",
+            payload={"profile": profile, "results": ci_payload},
+        ).write()
+        policy_result = self._policy_evaluator.evaluate(ci_payload)
+        if not policy_result.accepted:
+            PDCAEntry(phase="Act", event="policy_reject", payload={"reasons": policy_result.reasons}).write()
+            raise RuntimeError("Policy evaluation failed: " + "; ".join(policy_result.reasons))
+        summary_path = self._config.artifacts_dir / "executor_summary.json"
+        summary_path.write_text(json.dumps({"ci_results": ci_payload, "policy": policy_result.reasons}, indent=2))
+        PDCAEntry(phase="Act", event="completed", payload={"profile": profile}).write()
+
+    def _apply_patches(self, patches: Iterable[dict]) -> None:
+        for patch in patches:
+            patch_content = patch["diff"].encode("utf-8")
+            process = subprocess.run(
+                ["git", "apply", "-"],
+                input=patch_content,
+                cwd=self._config.workspace,
+                capture_output=True,
+            )
+            if process.returncode != 0:
+                LOGGER.error("Failed to apply patch: %s", process.stderr.decode("utf-8"))
+                raise PatchApplicationError(process.stderr.decode("utf-8"))
+
+    def _scan_for_secrets(self) -> None:
+        for path in self._config.workspace.rglob("*"):
+            if path.is_file():
+                found, _ = self._secret_scanner.scan_file(path)
+                if found:
+                    raise RuntimeError(f"Secret detected in {path}")
+
+    def _run_ci(self, profile_name: str):
+        profile = self._config.profiles.get(profile_name)
+        if not profile:
+            raise ValueError(f"Unknown CI profile {profile_name}")
+        return self._ci_orchestrator.run_profile(profile, workdir=self._config.workspace)
 
