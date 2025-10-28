@@ -34,6 +34,7 @@ from aurora.eval.service import EvaluationService
 from aurora.learn.cli import list_adapters, sync_adapter, rollback_adapter
 from aurora.telemetry.errors import ErrorLogger
 from aurora.telemetry.service import TelemetryService
+from aurora.reward.service import RewardService
 
 
 app = typer.Typer(help="AURORA-SE command-line interface")
@@ -244,6 +245,72 @@ def telemetry(
             typer.echo("PDCA log is empty")
     else:
         typer.echo("Telemetry stack initialized")
+
+
+@app.command()
+def reward(
+    ci_results: Path = typer.Option(
+        Path("artifacts/ci_results.json"),
+        "--ci-results",
+        exists=True,
+        help="Path to CI results JSON (list of step dictionaries).",
+    ),
+    config_path: Path = typer.Option(
+        Path("configs/reward.yaml"),
+        "--config",
+        exists=True,
+        help="Reward configuration file.",
+    ),
+    regression: bool = typer.Option(False, "--regression", help="Run regression fixtures after evaluation."),
+    history: int = typer.Option(0, "--history", help="Print recent reward history entries."),
+    summary: bool = typer.Option(False, "--summary", help="Print reward summary statistics."),
+) -> None:
+    """Evaluate CI results and produce reward explainability artifacts."""
+
+    service = RewardService.from_config(config_path=config_path, root=Path.cwd())
+    payload = json.loads(ci_results.read_text(encoding="utf-8"))
+    if isinstance(payload, dict):
+        results = payload.get("results") or []
+    else:
+        results = payload
+    if not isinstance(results, list):
+        raise typer.BadParameter("CI results payload must be a list of dictionaries")
+    result = service.evaluate(results)
+    status = "ACCEPTED" if result.success else "REJECTED"
+    typer.echo(f"Reward {result.reward:.3f} [{status}]")
+    if result.reasons:
+        typer.echo("Policy notes:")
+        for reason in result.reasons:
+            typer.echo(f"- {reason}")
+
+    latest = service.render_explainability()
+    typer.echo(f"Explainability artifacts updated at {latest.parent}")
+
+    if regression:
+        mismatches = service.run_regression_suite()
+        if mismatches:
+            typer.echo("Regression mismatches detected:")
+            typer.echo(json.dumps(mismatches, indent=2))
+            raise typer.Exit(code=1)
+        typer.echo("Reward regression suite clean")
+
+    if history:
+        typer.echo("Recent history:")
+        for entry in service.history(limit=history):
+            reward_value = entry.get("reward", 0.0)
+            success_flag = bool(entry.get("success"))
+            success_state = "PASS" if success_flag else "WARN"
+            timestamp = entry.get("timestamp", "?")
+            typer.echo(f"{timestamp} reward={reward_value:.3f} {success_state}")
+
+    if summary:
+        summary_data = service.summary(limit=max(history, 50))
+        typer.echo(
+            "Summary: "
+            f"count={summary_data['count']} "
+            f"avg_reward={summary_data['average_reward']:.3f} "
+            f"success_rate={summary_data['success_rate']:.2%}"
+        )
 
 
 @app.command()

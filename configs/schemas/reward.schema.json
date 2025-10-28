@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Aurora-SE Reward Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "weights": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tests": {"type": "number"},
+        "coverage": {"type": "number"},
+        "perf": {"type": "number"},
+        "security": {"type": "number"},
+        "complexity": {"type": "number"},
+        "policy": {"type": "number"}
+      },
+      "required": ["tests", "coverage", "perf", "security", "complexity", "policy"]
+    },
+    "adaptive_scheduler": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "initial_weights": {"$ref": "#/properties/weights"},
+        "window_runs": {"type": "integer", "minimum": 1},
+        "min_weight": {"type": "number"},
+        "max_weight": {"type": "number"},
+        "adjust_on": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "strategy": {
+          "type": "string",
+          "enum": ["windowed", "ucb1", "epsilon_greedy"]
+        },
+        "explore_probability": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "reward_floor": {"type": "number"}
+      },
+      "required": ["window_runs", "min_weight", "max_weight", "adjust_on", "strategy"]
+    },
+    "bias_penalty": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "max_delta": {"type": "number"},
+        "penalty_weight": {"type": "number"}
+      },
+      "required": ["enabled", "max_delta", "penalty_weight"]
+    },
+    "explainability": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "store_path": {"type": "string"},
+        "formats": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "enum": ["json", "html"]}
+        },
+        "keep_last": {"type": "integer", "minimum": 1},
+        "enable_timeline": {"type": "boolean"},
+        "html_template": {"type": "string"},
+        "history_filename": {"type": "string"},
+        "trend_filename": {"type": "string"}
+      },
+      "required": ["store_path", "formats"]
+    },
+    "acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min_reward": {"type": "number"},
+        "require_security_pass": {"type": "boolean"},
+        "max_bias": {"type": "number"},
+        "enforce_explainability": {"type": "boolean"}
+      },
+      "required": ["min_reward", "require_security_pass", "max_bias"]
+    },
+    "experience_vault": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "log_path": {"type": "string"},
+        "index_root": {"type": "string"},
+        "max_records": {"type": "integer", "minimum": 1},
+        "retention_days": {"type": "integer", "minimum": 1},
+        "dedupe_fields": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "redact_fields": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "compress": {"type": "boolean"}
+      },
+      "required": ["log_path", "index_root"]
+    },
+    "regression_suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "fixtures_path": {"type": "string"},
+        "tolerance": {"type": "number", "minimum": 0.0}
+      },
+      "required": ["enabled", "fixtures_path", "tolerance"]
+    }
+  }
+}

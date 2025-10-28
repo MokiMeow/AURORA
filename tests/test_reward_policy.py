@@ -15,3 +15,10 @@ def test_reward_policy_rejects_security_failure():
     assert result.accepted is False
     assert "Security score" in result.reasons[0]
 
+
+def test_reward_policy_requires_explainability():
+    policy = RewardPolicy(min_reward=0.0, require_security_pass=False, enforce_explainability=True)
+    result = policy.evaluate(1.0, {"security_score": 1.0}, explainability_emitted=False)
+    assert result.accepted is False
+    assert "Explainability" in result.reasons[-1]
+

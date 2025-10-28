@@ -1,0 +1,18 @@
+{
+  "name": "ci_success",
+  "expected_reward": 6.9,
+  "ci_results": [
+    {
+      "suite": "ci",
+      "metrics": {
+        "tests": {"passed": 5, "failed": 0},
+        "coverage": {"percent": 85.0, "delta": 0.3},
+        "performance": {"p95_ms": 420, "delta_ms": 0.2},
+        "security": {"score": 1.0, "findings": 0},
+        "complexity": {"delta": -0.1},
+        "policy": {"bonus": 0.5},
+        "bias": {"score": 0.02}
+      }
+    }
+  ]
+}

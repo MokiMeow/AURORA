@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
+from typing import Any, Mapping
 
-import json
+from .reporting import RewardObservation, RewardReportWriter
 
 
 @dataclass(slots=True)
@@ -30,27 +31,55 @@ class RewardInputs:
     bias_penalty: float = 0.0
 
 
+@dataclass(slots=True)
+class RewardComputation:
+    reward: float
+    components: dict[str, float]
+    penalties: dict[str, float]
+
+
 class RewardCalculator:
-    def __init__(self, weights: RewardWeights, explainability_dir: Path | None = None) -> None:
+    def __init__(
+        self,
+        weights: RewardWeights,
+        explainability_dir: Path | None = None,
+        reporter: RewardReportWriter | None = None,
+    ) -> None:
         self._weights = weights
         self._explainability_dir = explainability_dir
+        self._reporter = reporter
         if self._explainability_dir:
             self._explainability_dir.mkdir(parents=True, exist_ok=True)
+            if self._reporter is None:
+                self._reporter = RewardReportWriter(self._explainability_dir)
 
     def compute(self, inputs: RewardInputs) -> float:
-        reward = (
-            self._weights.tests * inputs.delta_tests_passed
-            + self._weights.coverage * inputs.delta_coverage
-            + self._weights.perf * inputs.delta_perf_latency
-            + self._weights.security * inputs.delta_security_score
-            + self._weights.complexity * inputs.delta_cyclomatic
-            + self._weights.policy * inputs.policy_bonus
-        )
-        if hasattr(inputs, "bias_penalty"):
-            reward -= inputs.bias_penalty
-        if self._explainability_dir:
-            self._write_explainability(inputs, reward)
-        return reward
+        return self.compute_breakdown(inputs, emit=True).reward
+
+    def compute_breakdown(
+        self,
+        inputs: RewardInputs,
+        metadata: dict[str, Any] | None = None,
+        emit: bool = False,
+    ) -> RewardComputation:
+        components = {
+            "tests": self._weights.tests * inputs.delta_tests_passed,
+            "coverage": self._weights.coverage * inputs.delta_coverage,
+            "perf": self._weights.perf * inputs.delta_perf_latency,
+            "security": self._weights.security * inputs.delta_security_score,
+            "complexity": self._weights.complexity * inputs.delta_cyclomatic,
+            "policy": self._weights.policy * inputs.policy_bonus,
+        }
+        penalties = {"bias": inputs.bias_penalty} if getattr(inputs, "bias_penalty", 0.0) else {}
+        reward = sum(components.values()) - sum(penalties.values())
+        computation = RewardComputation(reward=reward, components=components, penalties=penalties)
+
+        if emit:
+            self._emit_explainability(computation, metadata)
+        return computation
+
+    def update_weights(self, weights: RewardWeights) -> None:
+        self._weights = weights
 
     @classmethod
     def from_mapping(cls, mapping: Mapping[str, float]) -> "RewardCalculator":
@@ -64,20 +93,30 @@ class RewardCalculator:
         )
         return cls(weights)
 
-    def _write_explainability(self, inputs: RewardInputs, reward: float) -> None:
+    def _emit_explainability(
+        self, computation: RewardComputation, metadata: dict[str, Any] | None = None
+    ) -> None:
+        if self._reporter is not None:
+            observation = RewardObservation(
+                reward=computation.reward,
+                components=computation.components,
+                penalties=computation.penalties,
+                metrics={},
+                success=True,
+                reasons=[],
+                metadata=metadata or {},
+            )
+            self._reporter.write(observation)
+            return
+
         if not self._explainability_dir:
             return
+
         path = self._explainability_dir / "latest_reward.json"
         payload = {
-            "reward": reward,
-            "components": {
-                "tests": self._weights.tests * inputs.delta_tests_passed,
-                "coverage": self._weights.coverage * inputs.delta_coverage,
-                "perf": self._weights.perf * inputs.delta_perf_latency,
-                "security": self._weights.security * inputs.delta_security_score,
-                "complexity": self._weights.complexity * inputs.delta_cyclomatic,
-                "policy": self._weights.policy * inputs.policy_bonus,
-            },
+            "reward": computation.reward,
+            "components": computation.components,
+            "penalties": computation.penalties,
         }
-        path.write_text(json.dumps(payload, indent=2))
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
