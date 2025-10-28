@@ -1,0 +1,173 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Aurora-SE Adapter Metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "version",
+    "base_model",
+    "timestamp",
+    "training",
+    "metrics",
+    "provenance",
+    "artifacts"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9\\.]+)?$"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "base_model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "license": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "training": {
+      "type": "object",
+      "required": ["epochs", "learning_rate", "dataset", "device"],
+      "additionalProperties": false,
+      "properties": {
+        "epochs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "learning_rate": {
+          "type": "number",
+          "minimum": 0
+        },
+        "dataset": {
+          "type": "object",
+          "required": ["path", "samples", "min_reward"],
+          "additionalProperties": false,
+          "properties": {
+            "path": {"type": "string"},
+            "samples": {"type": "integer", "minimum": 1},
+            "holdout": {"type": "integer", "minimum": 0},
+            "min_reward": {"type": "number"},
+            "stratify": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        },
+        "device": {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": {
+            "type": {"type": "string"},
+            "gpu_memory_gb": {"type": "integer", "minimum": 0},
+            "mixed_precision": {"type": "string"},
+            "gradient_checkpointing": {"type": "boolean"}
+          }
+        },
+        "lora": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rank": {"type": "integer", "minimum": 1},
+            "alpha": {"type": "integer", "minimum": 1},
+            "dropout": {"type": "number", "minimum": 0, "maximum": 1},
+            "target_modules": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        },
+        "accelerate": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mixed_precision": {"type": "string"},
+            "gradient_accumulation_steps": {"type": "integer", "minimum": 1},
+            "deepspeed_config": {"type": "string"},
+            "compile_model": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["loss", "accuracy"],
+      "additionalProperties": true,
+      "properties": {
+        "loss": {"type": "number"},
+        "accuracy": {"type": "number"},
+        "bias_score": {"type": "number"},
+        "evaluation": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["suite", "score"],
+            "properties": {
+              "suite": {"type": "string"},
+              "score": {"type": "number"},
+              "details": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["commit", "branch", "artifacts"],
+      "additionalProperties": false,
+      "properties": {
+        "commit": {"type": "string"},
+        "branch": {"type": "string"},
+        "repository": {"type": "string"},
+        "artifacts": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "weights": {"type": "string"},
+        "tokenizer": {"type": "string"},
+        "metrics": {"type": "string"},
+        "bias_report": {"type": "string"}
+      }
+    },
+    "signatures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "value"],
+        "properties": {
+          "type": {"type": "string"},
+          "value": {"type": "string"},
+          "key_id": {"type": "string"},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      }
+    }
+  }
+}

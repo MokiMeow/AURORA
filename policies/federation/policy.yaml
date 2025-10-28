@@ -1,0 +1,9 @@
+bias_threshold: 0.1
+allowed_licenses:
+  - Apache-2.0
+  - MIT
+audit_log: artifacts/federation/audit.jsonl
+hooks:
+  post_sync:
+    - scripts/policies/enforce_federation.py
+

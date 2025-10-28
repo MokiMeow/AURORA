@@ -9,10 +9,10 @@
       "exit_code": 0,
       "suite": "lite",
       "profile": "balanced",
-      "run_id": "20251027T142119Z"
+      "run_id": "20251028T125137Z"
     },
-    "sbom": "C:\\Users\\smohi\\AppData\\Local\\Temp\\pytest-of-smohi\\pytest-140\\test_evaluation_service_runs_a0\\artifacts\\sbom\\lite_20251027T142119Z.json",
-    "telemetry": "C:\\Users\\smohi\\AppData\\Local\\Temp\\pytest-of-smohi\\pytest-140\\test_evaluation_service_runs_a0\\artifacts\\telemetry\\lite_20251027T142119Z.jsonl"
+    "sbom": "C:\\Users\\smohi\\AppData\\Local\\Temp\\pytest-of-smohi\\pytest-166\\test_evaluation_service_runs_a0\\artifacts\\sbom\\lite_20251028T125137Z.json",
+    "telemetry": "C:\\Users\\smohi\\AppData\\Local\\Temp\\pytest-of-smohi\\pytest-166\\test_evaluation_service_runs_a0\\artifacts\\telemetry\\lite_20251028T125137Z.jsonl"
   },
   "policy_overrides": []
 }

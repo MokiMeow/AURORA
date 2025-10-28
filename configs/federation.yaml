@@ -6,8 +6,9 @@ policies:
   enforcement: policies/security.yaml
   bias_threshold: 0.1
   licenses: policies/license.yaml
+  audit_log: artifacts/federation/audit.jsonl
 encryption:
   enabled: true
   method: age
-  key_path: secrets/federation_key.txt
+  key_path: artifacts/keys/federation.key
 

@@ -1,22 +1,63 @@
 training:
   adapters_path: adapters
-  dataset_path: experience/log.jsonl
   base_model: sshleifer/tiny-gpt2
   domain: core
+  adapter_version: 0.2.0
   bias_report: artifacts/bias_reports/latest.json
   output_root: adapters
-  sample_size: 128
-  min_reward: 0.1
   max_bias_score: 0.2
   epochs: 1
   learning_rate: 0.0001
+  evaluation_suites:
+    - lite-smoke
+  dataset:
+    path: experience/log.jsonl
+    sample_size: 128
+    min_reward: 0.1
+    stratify_by:
+      - reward
+      - length
+    reject_keywords:
+      - "nsfw"
+      - "secret"
+    augmentations:
+      - prompt_noise
+    balance_labels: true
+    holdout_fraction: 0.1
+    max_group_size: 256
   lora:
     r: 8
     alpha: 16
     dropout: 0.1
+    scaling: 1.0
     target_modules:
       - q_proj
       - v_proj
+    target_modules_pattern:
+      - "layers\\d+\\.self_attn"
+  accelerate:
+    mixed_precision: bf16
+    gradient_accumulation_steps: 2
+    gradient_checkpointing: true
+    device_map: auto
+    use_int8: false
+    compile_model: false
+  scheduler:
+    interactive: true
+    nightly_cron: "0 3 * * *"
+    batch_profiles:
+      - nightly
+      - weekly
+    post_run_hooks:
+      - scripts/hooks/notify_slack.py
+    telemetry_tags:
+      - phase5
+      - training
+  metadata:
+    schema_path: configs/schemas/adapter_metadata.schema.json
+    changelog_path: artifacts/adapters/changelog.json
+    provenance_path: artifacts/adapters/provenance.jsonl
+    signing_key_path: artifacts/keys/adapter_signing.pem
   regularization_prompts:
     - "You are AURORA-SE; respond with code fixes only."
     - "Maintain security-first posture and cite policies."
@@ -25,6 +66,7 @@ training:
     gpu_memory_gb: 24
     fallback_mode: cpu
     precision: 8bit
+    prefer_gpu: true
 
 federation:
   enabled: true

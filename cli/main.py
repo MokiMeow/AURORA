@@ -29,9 +29,10 @@ from aurora.security.secrets import SecretScanner, load_secret_scanner_config
 from aurora.executor.policy import PolicyEvaluator
 from aurora.learn.config_loader import load_training_config
 from aurora.learn.service import LearningService
+from aurora.learn.federation import FederationConfig
 from aurora.eval.config_loader import load_evaluation_config
 from aurora.eval.service import EvaluationService
-from aurora.learn.cli import list_adapters, sync_adapter, rollback_adapter
+from aurora.learn.cli import list_adapters, sync_adapter, rollback_adapter, publish_adapter
 from aurora.telemetry.errors import ErrorLogger
 from aurora.telemetry.service import TelemetryService
 from aurora.reward.service import RewardService
@@ -171,21 +172,45 @@ def apply(
 
 
 @app.command()
+@app.command()
 def learn(
-    nightly: bool = typer.Option(False, "--nightly"),
+    mode: str = typer.Option(
+        "batch",
+        "--mode",
+        help="Run mode: batch executes once, interactive prompts for confirmations, nightly honours scheduler hooks.",
+    ),
     config_path: Path = typer.Option(Path("configs/learn.yaml"), "--config", exists=True),
-    federated: bool = typer.Option(False, "--federated"),
+    federated: bool = typer.Option(False, "--federated/--no-federated", help="Sync adapters to federation after training."),
 ) -> None:
     """Run adapter learning pipeline."""
 
+    normalized_mode = mode.lower()
+    if normalized_mode not in {"batch", "interactive", "nightly"}:
+        raise typer.BadParameter("Mode must be one of: batch, interactive, nightly")
     config = load_training_config(Path.cwd(), config_path)
     service = LearningService(config)
-    service.run(nightly=nightly, federated=federated)
-    typer.echo("Learning pipeline triggered")
+    nightly = normalized_mode == "nightly"
+    interactive = normalized_mode == "interactive"
+    service.run(nightly=nightly, federated=federated, interactive=interactive)
 
+    metadata_path = config.output_adapter / "metadata.json"
+    typer.echo(f"Adapter trained: {config.domain}:{config.adapter_version}")
+    typer.echo(f"Metadata available at {metadata_path}")
 
-@app.command()
-def adapters(command: str = typer.Argument(...), path: Path = typer.Option(Path("adapters"), "--path")) -> None:
+    if nightly and config.scheduler.nightly_cron:
+        typer.echo(f"Nightly schedule: {config.scheduler.nightly_cron}")
+
+    if federated and config.federation_config:
+        federation_cfg = FederationConfig.from_yaml(config.federation_config)
+        typer.echo(f"Federation audit log: {federation_cfg.audit_log_path}")
+
+    if interactive:
+        typer.echo("Interactive mode complete; review metadata before publishing.")
+def adapters(
+    command: str = typer.Argument(..., metavar="COMMAND"),
+    path: Path = typer.Option(Path("adapters"), "--path"),
+    metadata: Path | None = typer.Option(None, "--metadata", help="Metadata JSON when using publish command."),
+) -> None:
     """Adapter management commands."""
 
     if command == "list":
@@ -194,8 +219,13 @@ def adapters(command: str = typer.Argument(...), path: Path = typer.Option(Path(
     elif command == "sync":
         name = typer.prompt("Adapter name")
         version = typer.prompt("Adapter version")
-        metadata = sync_adapter(path, name, version, Path("configs/federation.yaml"))
-        typer.echo(json.dumps(metadata, indent=2))
+        config_path = typer.prompt("Federation config", default="configs/federation.yaml")
+        metadata_result = sync_adapter(path, name, version, Path(config_path))
+        typer.echo(json.dumps(metadata_result, indent=2))
+    elif command == "publish":
+        meta_path = metadata or Path(typer.prompt("Metadata path", default=str(path / "metadata.json")))
+        published = publish_adapter(path, meta_path)
+        typer.echo(f"Published {published['name']}:{published['version']}")
     elif command == "rollback":
         name = typer.prompt("Adapter name")
         version = typer.prompt("Adapter version")
@@ -203,139 +233,3 @@ def adapters(command: str = typer.Argument(...), path: Path = typer.Option(Path(
         typer.echo(f"Set active adapter to {resolved}")
     else:
         raise typer.BadParameter("Unsupported adapters command")
-
-
-@app.command()
-def eval(
-    suite: str = typer.Option("swe-bench-lite", "--suite"),
-    config_path: Path = typer.Option(Path("configs/eval.yaml"), "--config", exists=True),
-    export_metrics: bool = typer.Option(True, "--export-metrics/--no-export-metrics"),
-) -> None:
-    """Run evaluation suite (SWE-Bench)."""
-
-    config = load_evaluation_config(config_path)
-    service = EvaluationService(config)
-    result = service.run(suite_name=suite)
-    typer.echo(
-        "Evaluation completed with exit code "
-        f"{result.exit_code}; results at {result.output_path}"
-    )
-    if export_metrics:
-        typer.echo(f"Metrics saved to {result.metrics_path}")
-        typer.echo(f"Compliance report saved to {result.compliance_path}")
-        if result.sbom_path:
-            typer.echo(f"SBOM snapshot at {result.sbom_path}")
-        if result.telemetry_path:
-            typer.echo(f"Telemetry snapshot at {result.telemetry_path}")
-
-
-@app.command()
-def telemetry(
-    config_path: Path = typer.Option(Path("configs/telemetry.yaml"), "--config", exists=True),
-    export: bool = typer.Option(False, "--export", help="Export PDCA log to stdout"),
-) -> None:
-    """Initialize telemetry stack or export PDCA log."""
-
-    service = TelemetryService.from_config(config_path)
-    if export:
-        pdca_log = service.config.log_file
-        if pdca_log.exists():
-            typer.echo(pdca_log.read_text(encoding="utf-8"))
-        else:
-            typer.echo("PDCA log is empty")
-    else:
-        typer.echo("Telemetry stack initialized")
-
-
-@app.command()
-def reward(
-    ci_results: Path = typer.Option(
-        Path("artifacts/ci_results.json"),
-        "--ci-results",
-        exists=True,
-        help="Path to CI results JSON (list of step dictionaries).",
-    ),
-    config_path: Path = typer.Option(
-        Path("configs/reward.yaml"),
-        "--config",
-        exists=True,
-        help="Reward configuration file.",
-    ),
-    regression: bool = typer.Option(False, "--regression", help="Run regression fixtures after evaluation."),
-    history: int = typer.Option(0, "--history", help="Print recent reward history entries."),
-    summary: bool = typer.Option(False, "--summary", help="Print reward summary statistics."),
-) -> None:
-    """Evaluate CI results and produce reward explainability artifacts."""
-
-    service = RewardService.from_config(config_path=config_path, root=Path.cwd())
-    payload = json.loads(ci_results.read_text(encoding="utf-8"))
-    if isinstance(payload, dict):
-        results = payload.get("results") or []
-    else:
-        results = payload
-    if not isinstance(results, list):
-        raise typer.BadParameter("CI results payload must be a list of dictionaries")
-    result = service.evaluate(results)
-    status = "ACCEPTED" if result.success else "REJECTED"
-    typer.echo(f"Reward {result.reward:.3f} [{status}]")
-    if result.reasons:
-        typer.echo("Policy notes:")
-        for reason in result.reasons:
-            typer.echo(f"- {reason}")
-
-    latest = service.render_explainability()
-    typer.echo(f"Explainability artifacts updated at {latest.parent}")
-
-    if regression:
-        mismatches = service.run_regression_suite()
-        if mismatches:
-            typer.echo("Regression mismatches detected:")
-            typer.echo(json.dumps(mismatches, indent=2))
-            raise typer.Exit(code=1)
-        typer.echo("Reward regression suite clean")
-
-    if history:
-        typer.echo("Recent history:")
-        for entry in service.history(limit=history):
-            reward_value = entry.get("reward", 0.0)
-            success_flag = bool(entry.get("success"))
-            success_state = "PASS" if success_flag else "WARN"
-            timestamp = entry.get("timestamp", "?")
-            typer.echo(f"{timestamp} reward={reward_value:.3f} {success_state}")
-
-    if summary:
-        summary_data = service.summary(limit=max(history, 50))
-        typer.echo(
-            "Summary: "
-            f"count={summary_data['count']} "
-            f"avg_reward={summary_data['average_reward']:.3f} "
-            f"success_rate={summary_data['success_rate']:.2%}"
-        )
-
-
-@app.command()
-def governance(
-    command: str = typer.Argument(..., metavar="COMMAND"),
-    bundle_path: Path = typer.Option(Path("docs/governance/bundles/latest.json"), "--bundle"),
-) -> None:
-    """Governance utilities (bundle generation, policy checks)."""
-
-    if command == "bundle":
-        typer.echo(f"Latest governance bundle at {bundle_path}")
-    elif command == "policy":
-        typer.echo("Policy checks not yet implemented")
-    else:
-        raise typer.BadParameter("Unsupported governance command")
-
-
-def entrypoint() -> None:
-    app()
-
-
-def main() -> None:  # pragma: no cover - Typer CLI invocation
-    entrypoint()
-
-
-if __name__ == "__main__":  # pragma: no cover
-    main()
-
