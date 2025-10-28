@@ -1,0 +1,22 @@
+﻿results_dir: eval/ci_results
+dataset_manager:
+  cache_dir: /tmp/aurora-datasets
+  manifest_path: /tmp/aurora-datasets/manifest.json
+  auto_update: false
+  ttl_hours: 12
+analytics:
+  metrics_csv: eval/ci_results/metrics.csv
+  dashboard_html: docs/reports/ci_dashboard.html
+  compare_dir: eval/ci_results/compare
+defaults:
+  artifacts: artifacts/eval
+  schedule: nightly
+  timeout_minutes: 90
+suites:
+  swe-bench-lite:
+    command: ["python", "run.py", "--ci"]
+    dataset: datasets/swe-bench-lite
+  swe-bench-live:
+    command: ["python", "run_live.py", "--ci"]
+    dataset: datasets/swe-bench-live
+    schedule: weekly

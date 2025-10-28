@@ -1,0 +1,20 @@
+﻿results_dir: eval/local_results
+dataset_manager:
+  cache_dir: datasets/cache
+  manifest_path: datasets/manifest.json
+  auto_update: true
+  ttl_hours: 6
+  download_base_url: https://datasets.local/aurora
+analytics:
+  metrics_csv: eval/local_results/metrics.csv
+  dashboard_html: docs/reports/local_dashboard.html
+  compare_dir: eval/local_results/compare
+defaults:
+  artifacts: artifacts/eval
+  schedule: manual
+  timeout_minutes: 60
+suites:
+  swe-bench-lite:
+    command: ["python", "run.py", "--mode", "lite"]
+    dataset: datasets/swe-bench-lite
+    profile: fast

@@ -1,0 +1,28 @@
+﻿results_dir: eval/staging_results
+dataset_manager:
+  cache_dir: /var/lib/aurora/datasets
+  manifest_path: /var/lib/aurora/datasets/manifest.json
+  auto_update: true
+  ttl_hours: 24
+  download_base_url: https://datasets.staging.aurora
+analytics:
+  metrics_csv: eval/staging_results/metrics.csv
+  dashboard_html: docs/reports/weekly_dashboard.html
+  compare_dir: eval/staging_results/compare
+defaults:
+  artifacts: artifacts/eval
+  schedule: nightly
+  timeout_minutes: 180
+suites:
+  swe-bench-lite:
+    command: ["python", "run.py"]
+    dataset: datasets/swe-bench-lite
+  swe-bench-live:
+    command: ["python", "run_live.py"]
+    dataset: datasets/swe-bench-live
+    schedule: weekly
+  swe-bench-full:
+    command: ["python", "run_full.py"]
+    dataset: datasets/swe-bench-full
+    schedule: monthly
+    profile: thorough

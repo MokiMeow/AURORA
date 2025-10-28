@@ -30,6 +30,8 @@ from aurora.executor.policy import PolicyEvaluator
 from aurora.learn.config_loader import load_training_config
 from aurora.learn.service import LearningService
 from aurora.learn.federation import FederationConfig
+from aurora.eval.analytics import load_metrics, generate_dashboard
+from aurora.eval.compare import compare_metrics
 from aurora.eval.config_loader import load_evaluation_config
 from aurora.eval.service import EvaluationService
 from aurora.learn.cli import list_adapters, sync_adapter, rollback_adapter, publish_adapter
@@ -39,6 +41,8 @@ from aurora.reward.service import RewardService
 
 
 app = typer.Typer(help="AURORA-SE command-line interface")
+eval_app = typer.Typer(help="Evaluation workflows")
+app.add_typer(eval_app, name="eval")
 
 
 @app.callback(invoke_without_command=True)
@@ -172,7 +176,6 @@ def apply(
 
 
 @app.command()
-@app.command()
 def learn(
     mode: str = typer.Option(
         "batch",
@@ -206,6 +209,58 @@ def learn(
 
     if interactive:
         typer.echo("Interactive mode complete; review metadata before publishing.")
+
+
+@eval_app.command("run")
+def eval_run(
+    suite: str = typer.Argument(..., help="Name of the evaluation suite to execute."),
+    config_path: Path = typer.Option(Path("configs/eval.yaml"), "--config", exists=True),
+) -> None:
+    """Execute an evaluation suite and emit metrics."""
+
+    config = load_evaluation_config(config_path)
+    service = EvaluationService(config)
+    result = service.run(suite)
+    metrics = json.loads(result.metrics_path.read_text(encoding="utf-8"))
+    typer.echo(json.dumps({"exit_code": result.exit_code, "metrics": metrics}, indent=2))
+    typer.echo(f"Artifacts stored under {result.output_path.parent}")
+
+
+@eval_app.command("compare")
+def eval_compare(
+    run_a: Path = typer.Argument(..., exists=True, help="Baseline metrics JSON"),
+    run_b: Path = typer.Argument(..., exists=True, help="Comparison metrics JSON"),
+) -> None:
+    """Compare two evaluation runs and report metric deltas."""
+
+    diff = compare_metrics(run_a, run_b)
+    typer.echo(json.dumps(diff, indent=2))
+
+
+@eval_app.command("report")
+def eval_report(
+    config_path: Path = typer.Option(Path("configs/eval.yaml"), "--config", exists=True),
+    suite: str | None = typer.Option(None, "--suite", help="Filter results by suite"),
+    limit: int = typer.Option(10, "--limit", min=1, help="Number of recent runs to display"),
+    refresh_dashboard: bool = typer.Option(True, "--refresh-dashboard/--skip-dashboard"),
+) -> None:
+    """Summarize evaluation metrics and optionally regenerate the dashboard."""
+
+    config = load_evaluation_config(config_path)
+    df = load_metrics(config.results_dir)
+    if df.empty:
+        typer.echo("No evaluation metrics found.")
+        return
+    if suite is not None:
+        df = df[df["suite"] == suite]
+    summary = df.tail(limit)
+    typer.echo(json.dumps(summary.to_dict(orient="records"), indent=2))
+    if refresh_dashboard:
+        generate_dashboard(config.results_dir, config.analytics.dashboard_html)
+        typer.echo(f"Dashboard refreshed at {config.analytics.dashboard_html}")
+
+
+@app.command()
 def adapters(
     command: str = typer.Argument(..., metavar="COMMAND"),
     path: Path = typer.Option(Path("adapters"), "--path"),
