@@ -18,12 +18,25 @@ from aurora.telemetry.errors import ErrorLogger
 LOGGER = logging.getLogger(__name__)
 
 
+@dataclass(slots=True)
+class SandboxResult:
+    returncode: int
+    stdout: str
+    stderr: str
+
+
 class SandboxError(RuntimeError):
     """Raised when sandbox execution fails."""
 
 
 class SandboxRunner:
-    def run(self, command: Sequence[str], workdir: Path | None = None) -> int:
+    def run(
+        self,
+        command: Sequence[str],
+        workdir: Path | None = None,
+        timeout: int | None = None,
+        env: dict[str, str] | None = None,
+    ) -> SandboxResult:
         raise NotImplementedError
 
 
@@ -31,11 +44,27 @@ class SandboxRunner:
 class LocalSandbox(SandboxRunner):
     env: dict[str, str] | None = None
 
-    def run(self, command: Sequence[str], workdir: Path | None = None) -> int:
-        result = subprocess.run(command, cwd=workdir, env=self.env, capture_output=True, text=True)
+    def run(
+        self,
+        command: Sequence[str],
+        workdir: Path | None = None,
+        timeout: int | None = None,
+        env: dict[str, str] | None = None,
+    ) -> SandboxResult:
+        merged_env = dict(self.env or {})
+        if env:
+            merged_env.update(env)
+        result = subprocess.run(
+            command,
+            cwd=workdir,
+            env=merged_env or None,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
         if result.returncode != 0:
-            raise SandboxError(result.stderr)
-        return result.returncode
+            raise SandboxError(result.stderr or result.stdout)
+        return SandboxResult(result.returncode, result.stdout, result.stderr)
 
 
 @dataclass(slots=True)
@@ -62,7 +91,13 @@ class DockerSandbox(SandboxRunner):
     read_only_root: bool = True
     additional_args: Sequence[str] = ()
 
-    def run(self, command: Sequence[str], workdir: Path | None = None) -> int:
+    def run(
+        self,
+        command: Sequence[str],
+        workdir: Path | None = None,
+        timeout: int | None = None,
+        env: dict[str, str] | None = None,
+    ) -> SandboxResult:
         docker_bin = shutil.which("docker")
         if not docker_bin:
             raise SandboxError("docker binary is not available on PATH")
@@ -75,9 +110,11 @@ class DockerSandbox(SandboxRunner):
             docker_command.append("--read-only")
         for mount in self.mounts:
             docker_command.extend(["-v", mount.to_docker_flag()])
-        if self.env:
-            for key, value in self.env.items():
-                docker_command.extend(["-e", f"{key}={value}"])
+        merged_env = dict(self.env or {})
+        if env:
+            merged_env.update(env)
+        for key, value in merged_env.items():
+            docker_command.extend(["-e", f"{key}={value}"])
         if self.network:
             docker_command.extend(["--network", self.network])
         if self.seccomp_profile:
@@ -91,10 +128,16 @@ class DockerSandbox(SandboxRunner):
         docker_command.extend(self.additional_args)
         docker_command.append(self.image)
         docker_command.extend(command)
-        result = subprocess.run(docker_command, cwd=workdir, capture_output=True, text=True)
+        result = subprocess.run(
+            docker_command,
+            cwd=workdir,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
         if result.returncode != 0:
             raise SandboxError(result.stderr or result.stdout)
-        return result.returncode
+        return SandboxResult(result.returncode, result.stdout, result.stderr)
 
 
 @dataclass(slots=True)
@@ -124,7 +167,13 @@ class FirecrackerSandbox(SandboxRunner):
     snapshot_dir: Path | None = None
     error_logger: ErrorLogger | None = None
 
-    def run(self, command: Sequence[str], workdir: Path | None = None) -> int:
+    def run(
+        self,
+        command: Sequence[str],
+        workdir: Path | None = None,
+        timeout: int | None = None,
+        env: dict[str, str] | None = None,
+    ) -> SandboxResult:
         if not shutil.which(self.firectl_bin):
             raise SandboxError("firectl binary is not available; cannot launch Firecracker VM")
         if not self.kernel_image.exists():
@@ -178,11 +227,17 @@ class FirecrackerSandbox(SandboxRunner):
                 )
             else:
                 LOGGER.warning("Firecracker sandbox requested egress but no network config supplied")
-            result = subprocess.run(firectl_command, cwd=self.workspace, capture_output=True, text=True)
+            result = subprocess.run(
+                firectl_command,
+                cwd=self.workspace,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
             if result.returncode != 0:
                 self._log_failure(result, vm_id)
                 raise SandboxError(result.stderr or result.stdout)
-        return 0
+        return SandboxResult(0, result.stdout if 'result' in locals() else "", result.stderr if 'result' in locals() else "")
 
     def _log_failure(self, result: subprocess.CompletedProcess[str], vm_id: str) -> None:
         if self.error_logger:
@@ -206,4 +261,3 @@ def build_mounts(entries: Iterable[dict[str, object]]) -> list[SandboxMount]:
         read_only = bool(entry.get("readonly", True))
         mounts.append(SandboxMount(source=source, target=target, read_only=read_only))
     return mounts
-

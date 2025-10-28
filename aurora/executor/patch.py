@@ -40,6 +40,19 @@ def apply(patch: str, workspace: Path) -> None:
         raise PatchError(result.stderr.decode("utf-8"))
 
 
+def apply_three_way(patch: str, workspace: Path) -> None:
+    """Attempt to apply patch using three-way merge fallback."""
+
+    result = subprocess.run(
+        ["git", "apply", "--3way", "-"],
+        input=patch.encode("utf-8"),
+        cwd=workspace,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        raise PatchError(result.stderr.decode("utf-8"))
+
+
 def rollback(patch: str, workspace: Path) -> None:
     """Revert applied patch."""
 

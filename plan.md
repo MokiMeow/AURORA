@@ -171,6 +171,12 @@ Each phase ends only when all exit criteria (deliverables + verification) are sa
 - Drift detection (git status checks, untracked file guardrails) with corrective actions.
 - Executor telemetry enriched with per-step metrics and correlation IDs.
 
+**Phase 3 Productionization Summary**
+
+- Patch application now supports three-way merge fallback with drift guardrails and diff explainers recorded under `artifacts/`.
+- CI orchestrator captures per-step metadata (durations, retries, correlation IDs) with dependency-aware execution and sandbox log streaming.
+- Manual approval workflow and policy gates integrate SBOM/CVE/license artifacts plus chaos/coverage outputs for governance.
+
 **Verification & Exit Criteria**
 
 - End-to-end autopilot run on demo repo + large OSS repo (>=100k files).

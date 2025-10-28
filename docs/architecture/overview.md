@@ -25,9 +25,9 @@ All components operate in a workspace root with sandboxed execution boundaries; 
 - Emits PDCA events for every planning run, persists planner sessions (`artifacts/planner_sessions/`), and archives sanitized artifacts (`artifacts/planner_output.txt`, `artifacts/self_edit.json`, critic feedback).
 
 ### Executor (`aurora.executor`)
-- Applies patches through `git apply` with a dry-run guard, rejects edits that delete tests, and scans for secrets (regex + TruffleHog/GitLeaks backends) before running CI.
-- Runs CI profiles through hardened sandbox runners (local process isolation, Docker with seccomp/AppArmor/read-only root, and Firecracker microVMs launched via `firectl`) while enforcing policy gates defined in `policies/security.yaml` and persisting security artifacts (SBOM, CVE, license reports).
-- Records PDCA entries for "Do -> Check -> Act", including CI summaries, policy outcomes, and a consolidated `artifacts/executor_summary.json`.
+  - Applies patches through `git apply` with a dry-run guard and three-way merge fallback, rejects edits that delete tests, and scans for secrets (regex + TruffleHog/GitLeaks backends) before running CI.
+  - Runs CI profiles through hardened sandbox runners (local process isolation, Docker with seccomp/AppArmor/read-only root, and Firecracker microVMs launched via `firectl`) while enforcing policy gates defined in `policies/security.yaml` and persisting security artifacts (SBOM, CVE, license reports).
+  - Captures diff explainers, manual approval checkpoints, drift detection, and per-step CI telemetry (durations, retries, correlation IDs) under `artifacts/` and PDCA logs.
 
 ### Reward Engine (`aurora.reward`)
 - Converts CI results into reward snapshots, enforces policy thresholds, and appends decisions to the experience vault.

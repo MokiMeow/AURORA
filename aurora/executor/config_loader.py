@@ -37,11 +37,17 @@ def load_executor_config(workspace: Path, config_path: Path) -> ExecutorConfig:
                     name=step["name"],
                     command=step["command"],
                     fail_fast=step.get("fail_fast"),
+                    depends_on=tuple(step.get("depends_on", [])),
+                    retries=int(step.get("retries", 0)),
+                    timeout_minutes=step.get("timeout_minutes"),
+                    env=step.get("env"),
                 )
                 for step in base_steps
             ),
             timeout_minutes=profile_data.get("timeout_minutes", 30),
             fail_fast=profile_data.get("fail_fast", False),
+            parallel=profile_data.get("parallel", False),
+            max_concurrency=profile_data.get("max_concurrency"),
         )
         profiles[name] = profile
     sandbox_cfg = data.get("runtime", {})

@@ -12,6 +12,10 @@ class CIPipelineStep:
     name: str
     command: list[str]
     fail_fast: bool | None = None
+    depends_on: tuple[str, ...] = ()
+    retries: int = 0
+    timeout_minutes: int | None = None
+    env: Dict[str, str] | None = None
 
 
 @dataclass(slots=True)
@@ -20,6 +24,8 @@ class CIProfile:
     steps: tuple[CIPipelineStep, ...]
     timeout_minutes: int
     fail_fast: bool
+    parallel: bool = False
+    max_concurrency: int | None = None
 
 
 @dataclass(slots=True)

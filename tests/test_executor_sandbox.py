@@ -20,7 +20,7 @@ def test_docker_sandbox_builds_command(monkeypatch, tmp_path: Path):
 
     captured = {}
 
-    def fake_run(cmd, cwd=None, capture_output=True, text=True):
+    def fake_run(cmd, cwd=None, capture_output=True, text=True, timeout=None):
         captured["cmd"] = cmd
         return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
 
@@ -80,7 +80,7 @@ def test_firecracker_sandbox_builds_command(monkeypatch, tmp_path: Path):
 
     captured = {}
 
-    def fake_run(cmd, cwd=None, capture_output=True, text=True):
+    def fake_run(cmd, cwd=None, capture_output=True, text=True, timeout=None):
         captured["cmd"] = cmd
         return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
 
