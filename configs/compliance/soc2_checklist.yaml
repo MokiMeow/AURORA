@@ -1,0 +1,18 @@
+framework: SOC2 Type II
+items:
+  - id: CC1.1
+    description: "Documented governance program approved by leadership."
+    status: completed
+    owner: governance-team
+  - id: CC3.2
+    description: "Security monitoring with alert escalation within SLA."
+    status: in_progress
+    owner: sre-team
+  - id: CC6.3
+    description: "Change management reviews recorded for critical deployments."
+    status: in_progress
+    owner: release-team
+  - id: CC7.2
+    description: "Incident response playbooks tested in the last quarter."
+    status: planned
+    owner: incident-commander

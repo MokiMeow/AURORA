@@ -20,3 +20,4 @@ class CompliancePolicy:
             issues.append("Missing SBOM reference")
         return issues
 
+

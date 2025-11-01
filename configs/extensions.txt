@@ -1,0 +1,1 @@
+# Add extension specs as module:Class entries

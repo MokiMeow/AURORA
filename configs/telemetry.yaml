@@ -14,3 +14,6 @@ logging:
   format: json
   file: telemetry/pdca.jsonl
 
+
+dashboard:
+  url: http://localhost:3000/d/aurora

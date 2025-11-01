@@ -93,3 +93,4 @@ federation:
     assert config.metadata.schema_path == tmp_path / "configs/schemas/adapter_metadata.schema.json"
     assert config.simulate is True
 
+

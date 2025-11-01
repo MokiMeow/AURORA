@@ -18,3 +18,4 @@ jobs:
         run: bash scripts/license_check.sh
       - name: SBOM diff
         run: bash scripts/sbom_diff.sh
+

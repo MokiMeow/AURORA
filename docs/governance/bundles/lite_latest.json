@@ -4,15 +4,30 @@
     "profile": "balanced",
     "schedule": "nightly",
     "metrics": {
-      "success_rate": 0.8,
-      "latency": 120.0,
-      "exit_code": 0,
       "suite": "lite",
       "profile": "balanced",
-      "run_id": "20251028T125137Z"
+      "run_id": "20251101T114146Z",
+      "exit_code": 0,
+      "timestamp": "2025-11-01T11:41:46.420690",
+      "success_rate": 0.8,
+      "latency": 120.0,
+      "patch_correct": 3,
+      "compile_failures": 1,
+      "failures": 0,
+      "baseline": null,
+      "compare_against": null
     },
-    "sbom": "C:\\Users\\smohi\\AppData\\Local\\Temp\\pytest-of-smohi\\pytest-166\\test_evaluation_service_runs_a0\\artifacts\\sbom\\lite_20251028T125137Z.json",
-    "telemetry": "C:\\Users\\smohi\\AppData\\Local\\Temp\\pytest-of-smohi\\pytest-166\\test_evaluation_service_runs_a0\\artifacts\\telemetry\\lite_20251028T125137Z.jsonl"
+    "sbom": "C:\\Users\\smohi\\AppData\\Local\\Temp\\pytest-of-smohi\\pytest-182\\test_evaluation_service_runs_a0\\artifacts\\sbom\\lite_20251101T114146Z.json",
+    "telemetry": "C:\\Users\\smohi\\AppData\\Local\\Temp\\pytest-of-smohi\\pytest-182\\test_evaluation_service_runs_a0\\artifacts\\telemetry\\lite_20251101T114146Z.jsonl",
+    "postprocessors": [
+      "scripts/post/process.py"
+    ]
   },
-  "policy_overrides": []
+  "policy_overrides": [],
+  "ethics_charter": "# Aurora-SE Ethics Charter\n\nAURORA-SE operates as an autonomous engineering system with the following ethical guardrails:\n\n1. **Human Oversight** \u2013 All production changes require human approval or a documented emergency exemption.\n2. **Data Privacy** \u2013 Planner and telemetry data are scoped to the originating workspace. Redaction policies are enforced prior to egress.\n3. **Security First** \u2013 Secrets, credentials, and personal data are never logged. SBOM/CVE scans block releases with known critical issues.\n4. **Transparency** \u2013 Autopilot sessions emit PDCA events, diff summaries, and reward rationales for audit trails.\n5. **Fairness** \u2013 Reward adjustments and learning adapters are evaluated for bias before promotion.\n\nThis charter is reviewed quarterly by the governance committee and any deviations trigger an incident response review.",
+  "slo_summary": "# Service Level Objectives\n\n- **Planner latency**: P50 30s, P95 60s\n- **Executor success rate**: 99% on fast profile\n- **Evaluation completion**: 99% nightly success\n- **Telemetry availability**: 99.5%",
+  "swe_bench_trends": {
+    "highlights": [],
+    "source": "docs\\reports\\weekly_governance.md"
+  }
 }

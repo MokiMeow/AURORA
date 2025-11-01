@@ -9,3 +9,5 @@
 - Observability & Telemetry Operations
 - Compliance Bundle Procedures
 
+- Incident Response (Phase 8)
+- Telemetry Alert Playbook

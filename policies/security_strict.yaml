@@ -1,0 +1,5 @@
+min_reward: 0.5
+require_security_pass: true
+max_bias: 0.02
+enforce_explainability: true
+

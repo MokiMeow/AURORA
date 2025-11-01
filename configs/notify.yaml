@@ -1,0 +1,10 @@
+channels:
+  slack:
+    webhook: https://hooks.slack.com/services/T000/B000/XXXXX
+  email:
+    recipients:
+      - ops@example.com
+  webhook:
+    endpoint: https://example.com/webhook
+log_path: artifacts/notify/log.jsonl
+

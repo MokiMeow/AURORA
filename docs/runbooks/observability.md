@@ -19,3 +19,4 @@
 - Structured errors appended to `telemetry/errors.jsonl`.
 - Categorize incidents by `category` field; escalate security events immediately.
 
+

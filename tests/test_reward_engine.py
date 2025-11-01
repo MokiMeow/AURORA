@@ -15,6 +15,13 @@ from aurora.reward import (
 from aurora.reward.policy import RewardPolicy
 
 
+class DummyMetrics:
+    started = True
+
+    def record_reward(self, suite: str, reward: float) -> None:
+        pass
+
+
 def test_reward_engine_computes_reward(tmp_path: Path):
     collector = MetricCollector()
     reporter = RewardReportWriter(tmp_path / "reports", formats=("json",))
@@ -29,6 +36,7 @@ def test_reward_engine_computes_reward(tmp_path: Path):
         history_path=tmp_path / "history.jsonl",
         policy=RewardPolicy(),
         reporter=reporter,
+        metrics_emitter=DummyMetrics(),
     )
     result = engine.compute_reward(
         [

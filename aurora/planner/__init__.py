@@ -3,6 +3,7 @@
 from .schema import SelfEdit
 from .service import PlannerService
 from .config import PlannerConfig
+from .model_manager import ModelManager, ModelProfile
 
-__all__ = ["SelfEdit", "PlannerService", "PlannerConfig"]
+__all__ = ["SelfEdit", "PlannerService", "PlannerConfig", "ModelManager", "ModelProfile"]
 

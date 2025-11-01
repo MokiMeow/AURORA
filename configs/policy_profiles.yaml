@@ -1,0 +1,7 @@
+profiles:
+  baseline:
+    description: "Baseline policy aligning with default security gates."
+    path: policies/security.yaml
+  strict:
+    description: "Stricter policy requiring enhanced compliance."
+    path: policies/security_strict.yaml

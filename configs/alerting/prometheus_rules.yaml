@@ -1,0 +1,32 @@
+groups:
+  - name: aurora-se-telemetry
+    rules:
+      - alert: PDCAErrorSpike
+        expr: rate(aurora_reward_latest[5m]) < 0
+        for: 10m
+        labels:
+          severity: warning
+          team: aurora
+        annotations:
+          summary: "Negative reward trend detected"
+          description: "Reward values have been negative for 10 minutes. Investigate recent deployments."
+      - alert: TelemetryIngestionStall
+        expr: absent(aurora_eval_runs_total)
+        for: 5m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "Telemetry ingestion stalled"
+          description: "No evaluation metrics received in the last 5 minutes."
+  - name: aurora-se-compliance
+    rules:
+      - alert: CompliancePolicyViolation
+        expr: increase(aurora_governance_policy_breaches_total[15m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: governance
+        annotations:
+          summary: "Governance policy violation detected"
+          description: "At least one policy breach recorded in the last 15 minutes. Trigger compliance runbook."

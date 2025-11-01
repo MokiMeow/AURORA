@@ -17,3 +17,4 @@ examples/demo/
 
 `pycalc.calc.add` incorrectly subtracts numbers. The unit test in `tests/test_calc.py` highlights the regression. We will use AURORA-SE to generate a fix, apply it, and validate the improvement using DeepSeek-R1 as the planner with the critic enabled.
 
+
