@@ -18,7 +18,7 @@ AURORA-SE is a self-adapting engineering system that plans, applies, verifies, a
 
 ### Getting Started
 
-1. Use Python 3.10–3.13 and create a virtual environment.
+1. Use Python 3.10–3.12 and create a virtual environment.
 2. Install the project and development tools: `python -m pip install -e '.[dev]'`.
 3. Prepare runtime directories: `aurora-se init`.
 4. Run checks: `python -m ruff check .`, `python -m mypy aurora cli`, and `python -m pytest`.
