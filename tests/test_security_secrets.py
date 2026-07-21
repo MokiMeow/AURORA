@@ -1,10 +1,12 @@
 """Tests for enhanced secret scanner."""
 
+import json
 from pathlib import Path
 
 import subprocess
 
 from aurora.security.secrets import ExternalScannerConfig, SecretScanner, SecretScannerConfig
+from aurora.telemetry.errors import ErrorLogger
 
 
 class DummyCompletedProcess(subprocess.CompletedProcess):
@@ -34,3 +36,28 @@ def test_secret_scanner_external_detection(monkeypatch, tmp_path: Path):
     scanner = SecretScanner(config)
     found, _ = scanner.scan_file(file_path)
     assert found is True
+
+
+def test_secret_scanner_does_not_persist_external_output(monkeypatch, tmp_path: Path):
+    file_path = tmp_path / "suspect.txt"
+    file_path.write_text("clean content", encoding="utf-8")
+    log_path = tmp_path / "errors.jsonl"
+
+    def fake_run(command, check=False, capture_output=True, text=True, timeout=60):
+        return DummyCompletedProcess(command, returncode=1, stdout="sensitive-value")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    scanner = SecretScanner(
+        SecretScannerConfig(
+            patterns=(r"API_KEY",),
+            external=(ExternalScannerConfig(name="fake", command=["scanner", "{path}"]),),
+            error_logger=ErrorLogger(log_path),
+        )
+    )
+
+    found, _ = scanner.scan_file(file_path)
+
+    record = json.loads(log_path.read_text(encoding="utf-8"))
+    assert found is True
+    assert "sensitive-value" not in log_path.read_text(encoding="utf-8")
+    assert record["context"]["stdout_present"] is True

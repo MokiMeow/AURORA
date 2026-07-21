@@ -43,15 +43,24 @@ class TreeSitterParser:
         }
 
     def scan_repository(self, root: Path) -> Iterator[SourceFile]:
+        resolved_root = root.resolve()
         for language in self._config.languages:
             for extension in language.file_extensions:
-                for path in root.rglob(f"*{extension}"):
-                    if path.is_file():
-                        yield SourceFile(
-                            path=path,
-                            language=language,
-                            content=path.read_text(encoding="utf-8"),
-                        )
+                for path in resolved_root.rglob(f"*{extension}"):
+                    try:
+                        resolved_path = path.resolve(strict=True)
+                        resolved_path.relative_to(resolved_root)
+                        if path.is_symlink() or not resolved_path.is_file():
+                            continue
+                        content = resolved_path.read_text(encoding="utf-8")
+                    except (OSError, UnicodeDecodeError, ValueError) as exc:
+                        LOGGER.warning("Skipping unreadable source file %s: %s", path, exc)
+                        continue
+                    yield SourceFile(
+                        path=resolved_path,
+                        language=language,
+                        content=content,
+                    )
 
     def parse_sources(self, sources: Iterable[SourceFile]) -> Iterator[ParsedUnit]:
         for source in sources:
@@ -129,7 +138,7 @@ class TreeSitterParser:
         parser_language = getattr(parser, "language", None)
         if parser_language is None:
             raise AttributeError("Parser missing language configuration")
-        query = parser_language.query(query_path.read_text(encoding="utf-8"))  # type: ignore[call-arg]
+        query = parser_language.query(query_path.read_text(encoding="utf-8"))
         content_bytes = source.content.encode("utf-8")
         root_node = getattr(tree, "root_node", None)
         if root_node is None:

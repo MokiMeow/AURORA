@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable
 
+from aurora.paths import resolve_within
+
 
 @dataclass(slots=True)
 class Session:
@@ -74,7 +76,7 @@ class SessionManager:
             )
 
     def _load(self, session_id: str) -> Session:
-        metadata_path = self._root / session_id / "metadata.json"
+        metadata_path = resolve_within(self._root, session_id, "metadata.json", label="session id")
         if not metadata_path.exists():
             raise FileNotFoundError(f"Session {session_id} not found")
         data = json.loads(metadata_path.read_text(encoding="utf-8"))

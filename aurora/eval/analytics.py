@@ -4,11 +4,17 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Iterable
-
 import pandas as pd
-import plotly.graph_objects as go  # type: ignore[import-untyped]
-from plotly.subplots import make_subplots  # type: ignore[import-untyped]
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+
+def _safe_csv_cell(value: object) -> object:
+    """Keep spreadsheet programs from interpreting untrusted text as formulas."""
+
+    if isinstance(value, str) and value.startswith(("=", "+", "-", "@")):
+        return f"'{value}"
+    return value
 
 
 def load_metrics(results_dir: Path) -> pd.DataFrame:
@@ -32,7 +38,10 @@ def export_metrics_csv(results_dir: Path, output_csv: Path) -> None:
     if df.empty:
         output_csv.write_text("", encoding="utf-8")
         return
-    df.to_csv(output_csv, index=False)
+    safe_df = df.copy()
+    for column in safe_df.select_dtypes(include=["object", "string"]).columns:
+        safe_df[column] = safe_df[column].map(_safe_csv_cell)
+    safe_df.to_csv(output_csv, index=False)
 
 
 def _failure_taxonomy(df: pd.DataFrame) -> pd.Series:
@@ -48,7 +57,7 @@ def _failure_taxonomy(df: pd.DataFrame) -> pd.Series:
     return failures.groupby("suite").size()
 
 
-def _latency_series(df: pd.DataFrame) -> Iterable[float]:
+def _latency_series(df: pd.DataFrame) -> pd.Series:
     if "latency" in df.columns:
         return df["latency"].astype(float)
     if "latency_seconds" in df.columns:

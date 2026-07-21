@@ -26,6 +26,19 @@ def test_export_metrics_csv(tmp_path: Path):
     assert output_csv.exists()
 
 
+def test_export_metrics_csv_neutralizes_spreadsheet_formulas(tmp_path: Path):
+    metrics_file = tmp_path / "unsafe_metrics.json"
+    metrics_file.write_text(
+        json.dumps({"suite": "=1+1", "success_rate": 1.0}),
+        encoding="utf-8",
+    )
+    output_csv = tmp_path / "out" / "metrics.csv"
+
+    export_metrics_csv(tmp_path, output_csv)
+
+    assert "'=1+1" in output_csv.read_text(encoding="utf-8")
+
+
 def test_generate_dashboard(tmp_path: Path):
     metrics_file = tmp_path / "lite_metrics.json"
     _write_metric(metrics_file, "lite")

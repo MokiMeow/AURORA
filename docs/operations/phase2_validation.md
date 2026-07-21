@@ -18,4 +18,4 @@ Date: 2025-10-28T01:11:43Z
 - External model endpoints are mocked via httpx.MockTransport; no live network traffic is generated during the validation run.
 - Streaming support validated using synthetic server-sent events payloads.
 - Critic strategy quorum ensures at least one critic approval suffices while still logging dissenting responses.
-- Session transcripts are persisted under rtifacts/planner_sessions/ for audit replay.
+- Session transcripts are persisted under artifacts/planner_sessions/ for audit replay.

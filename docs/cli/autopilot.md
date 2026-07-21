@@ -1,13 +1,13 @@
 # Autopilot Command
 
-urora-se autopilot --task <task> orchestrates plan ? apply ? reward ? eval with guardrails:
+aurora-se autopilot --task <task> orchestrates plan â†’ apply â†’ reward â†’ eval with guardrails:
 
-- --max-iterations — stop after N PDCA cycles.
-- --max-cost — abort if estimated token cost exceeds the budget.
-- --seed — deterministic scheduling for repeatable tests.
-- --plugin — load extension hooks.
-- --dry-run — skip executor side effects.
-- --require-confirm — prompt before applying changes.
+- --max-iterations â€” stop after N PDCA cycles.
+- --max-cost â€” abort if estimated token cost exceeds the budget.
+- --seed â€” deterministic scheduling for repeatable tests.
+- --plugin â€” load extension hooks.
+- --dry-run â€” skip executor side effects.
+- --require-confirm â€” prompt before applying changes.
 
 Artifacts are written into the active session directory and tracked via telemetry.
 

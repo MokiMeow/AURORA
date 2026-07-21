@@ -12,7 +12,10 @@ def main() -> None:
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     metrics = metadata.get("metrics", {})
     bias = metrics.get("bias_score", metadata.get("bias_score"))
-    status = "OK" if bias is None or bias <= 0.1 else "WARN"
+    if not isinstance(bias, (int, float)):
+        print(json.dumps({"error": "bias_score is required and must be numeric"}))
+        sys.exit(2)
+    status = "OK" if bias <= 0.1 else "WARN"
     print(json.dumps({"adapter": metadata.get("name"), "version": metadata.get("version"), "bias_score": bias, "status": status}))
 
 

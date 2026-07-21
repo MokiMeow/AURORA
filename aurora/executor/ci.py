@@ -127,7 +127,7 @@ class CIOrchestrator:
 
 
 def time_to_iso(timestamp: float) -> str:
-    from datetime import datetime
+    from datetime import datetime, timezone
 
-    return datetime.utcfromtimestamp(timestamp).isoformat() + "Z"
+    return datetime.fromtimestamp(timestamp, timezone.utc).isoformat()
 

@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Optional
 
+from aurora.paths import resolve_within
+
 
 @dataclass(slots=True)
 class AdapterInfo:
@@ -56,7 +58,7 @@ class AdapterRegistry:
         if self._signing_key:
             metadata = self._attach_signature(metadata)
 
-        adapter_dir = self._root / info.name / info.version
+        adapter_dir = resolve_within(self._root, info.name, info.version, label="adapter identity")
         adapter_dir.mkdir(parents=True, exist_ok=True)
         metadata_path = adapter_dir / "metadata.json"
         metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
@@ -98,6 +100,8 @@ class AdapterRegistry:
                     raise ValueError(f"{prefix}.{key} elements must be of type '{item_type}'")
 
     def _attach_signature(self, metadata: dict) -> dict:
+        if self._signing_key is None:
+            raise RuntimeError("Signing key is not configured")
         payload = json.dumps(metadata, sort_keys=True).encode("utf-8")
         digest = hmac.new(self._signing_key, payload, hashlib.sha256).digest()
         signature = {
@@ -146,7 +150,7 @@ class AdapterRegistry:
             handle.write(json.dumps(entry) + "\n")
 
 
-_PRIMITIVE_TYPES = {
+_PRIMITIVE_TYPES: dict[str, type | tuple[type, ...]] = {
     "string": str,
     "number": (int, float),
     "integer": int,

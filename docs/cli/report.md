@@ -2,9 +2,9 @@
 
 Aurora-SE exposes governance reports aligned with the PDCA telemetry framework:
 
-- urora-se report weekly — generates docs/reports/weekly_governance.md summarizing metrics and dashboards.
-- urora-se report monthly — writes a monthly overview referencing incident logs.
-- urora-se report governance — produces a bundle summary for compliance sign-off.
-- urora-se report training — produces an adapter training status digest.
+- aurora-se report weekly â€” generates docs/reports/weekly_governance.md summarizing metrics and dashboards.
+- aurora-se report monthly â€” writes a monthly overview referencing incident logs.
+- aurora-se report governance â€” produces a bundle summary for compliance sign-off.
+- aurora-se report training â€” produces an adapter training status digest.
 
 Artifacts are stored under docs/reports/ and referenced from governance bundles.

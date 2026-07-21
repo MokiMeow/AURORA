@@ -1,14 +1,11 @@
-# NOTE: Mirror of ci/eval-nightly.yml for GitHub Actions execution.
-name: Evaluate (Nightly)
+name: Evaluate SWE-Bench Lite (Manual)
 
 on:
-  schedule:
-    - cron: "0 3 * * *"
   workflow_dispatch:
 
 jobs:
   swe-bench-lite:
-    uses: ./.github/workflows/templates/eval-suite.yml
+    uses: ./.github/workflows/eval-suite.yml
     with:
       suite: swe-bench-lite
       python-version: "3.11"

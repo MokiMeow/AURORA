@@ -17,8 +17,8 @@
       "baseline": null,
       "compare_against": null
     },
-    "sbom": "C:\\Users\\smohi\\AppData\\Local\\Temp\\pytest-of-smohi\\pytest-182\\test_evaluation_service_runs_a0\\artifacts\\sbom\\lite_20251101T114146Z.json",
-    "telemetry": "C:\\Users\\smohi\\AppData\\Local\\Temp\\pytest-of-smohi\\pytest-182\\test_evaluation_service_runs_a0\\artifacts\\telemetry\\lite_20251101T114146Z.jsonl",
+    "sbom": "artifacts/eval/lite/sbom/lite_20251101T114146Z.json",
+    "telemetry": "artifacts/eval/lite/telemetry/lite_20251101T114146Z.jsonl",
     "postprocessors": [
       "scripts/post/process.py"
     ]
@@ -28,6 +28,6 @@
   "slo_summary": "# Service Level Objectives\n\n- **Planner latency**: P50 30s, P95 60s\n- **Executor success rate**: 99% on fast profile\n- **Evaluation completion**: 99% nightly success\n- **Telemetry availability**: 99.5%",
   "swe_bench_trends": {
     "highlights": [],
-    "source": "docs\\reports\\weekly_governance.md"
+    "source": "docs/reports/weekly_governance.md"
   }
 }

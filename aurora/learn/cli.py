@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from aurora.paths import resolve_within
+
 from .registry import AdapterRegistry, AdapterInfo
 from .federation import FederationSync, FederationConfig
 from ..planner.pdca import PDCAEntry
@@ -33,7 +35,7 @@ def sync_adapter(root: Path, name: str, version: str, config_path: Path) -> dict
 
 
 def rollback_adapter(root: Path, name: str, version: str) -> Path:
-    path = root / name / version
+    path = resolve_within(root, name, version, label="adapter identity")
     if not path.exists():
         raise ValueError("Adapter version not available for rollback")
     PDCAEntry(
@@ -48,7 +50,12 @@ def publish_adapter(root: Path, metadata_path: Path, schema_path: Path | None = 
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     schema = schema_path or Path("configs/schemas/adapter_metadata.schema.json")
     registry = AdapterRegistry(root, schema_path=schema)
-    adapter_dir = root / metadata["name"] / metadata["version"]
+    adapter_dir = resolve_within(
+        root,
+        metadata["name"],
+        metadata["version"],
+        label="adapter identity",
+    )
     adapter_dir.mkdir(parents=True, exist_ok=True)
     (adapter_dir / "metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     info = AdapterInfo(

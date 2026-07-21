@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -91,5 +91,5 @@ class PlannerConfig:
     policy_notes: tuple[dict[str, Any], ...] = ()
     routes: tuple[ModelRoute, ...] = ()
     routing: RoutingStrategy | None = None
-    critic_strategy: CriticStrategy = CriticStrategy()
+    critic_strategy: CriticStrategy = field(default_factory=CriticStrategy)
 

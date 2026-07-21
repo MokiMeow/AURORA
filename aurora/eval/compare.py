@@ -19,8 +19,9 @@ def compare_metrics(path_a: Path, path_b: Path) -> List[dict[str, Any]]:
     for key in keys:
         value_a = metrics_a.get(key)
         value_b = metrics_b.get(key)
-        numeric = _is_number(value_a) and _is_number(value_b)
-        delta = (value_b - value_a) if numeric else None
+        numeric_a = _as_number(value_a)
+        numeric_b = _as_number(value_b)
+        delta = numeric_b - numeric_a if numeric_a is not None and numeric_b is not None else None
         diff.append(
             {
                 "metric": key,
@@ -32,11 +33,8 @@ def compare_metrics(path_a: Path, path_b: Path) -> List[dict[str, Any]]:
     return diff
 
 
-def _is_number(value: Any) -> bool:
-    if isinstance(value, (int, float)):
-        return True
+def _as_number(value: Any) -> float | None:
     try:
-        float(value)
-        return True
+        return float(value)
     except (TypeError, ValueError):
-        return False
+        return None

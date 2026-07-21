@@ -25,7 +25,7 @@ class MetricSnapshot:
     bias_score: float
     duration_seconds: float
 
-    def as_dict(self) -> dict[str, float]:
+    def as_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -45,8 +45,8 @@ class MetricCollector:
         return tuple(self._history)
 
     def from_ci_results(self, results: list[dict[str, Any]]) -> MetricSnapshot:
-        aggregated = {
-            "suite": "ci",
+        suite_name = "ci"
+        aggregated: dict[str, float] = {
             "tests_passed": 0.0,
             "tests_failed": 0.0,
             "coverage_percent": 0.0,
@@ -64,7 +64,7 @@ class MetricCollector:
         for result in results:
             suite = result.get("suite") or result.get("pipeline") or result.get("workflow")
             if suite:
-                aggregated["suite"] = str(suite)
+                suite_name = str(suite)
             metrics = self._resolve_metrics(result)
 
             tests_metrics = metrics.get("tests", {})
@@ -110,7 +110,7 @@ class MetricCollector:
 
             self._apply_heuristics(aggregated, result, metrics)
 
-        snapshot = MetricSnapshot(**aggregated)
+        snapshot = MetricSnapshot(suite=suite_name, **aggregated)
         self.record(snapshot)
         return snapshot
 

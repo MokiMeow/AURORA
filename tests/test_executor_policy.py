@@ -104,3 +104,29 @@ def test_policy_enforces_license_allowlist(tmp_path: Path):
     result = evaluator.evaluate([], metadata=metadata)
     assert result.accepted is False
     assert any("Denied license" in reason for reason in result.reasons)
+
+
+def test_policy_requires_exact_step_names(tmp_path: Path) -> None:
+    policy_path = _write_policy(tmp_path, {"ci": {"required_steps": ["lint"]}})
+    result = PolicyEvaluator(policy_path).evaluate([{"step": "not-linting", "success": True}])
+    assert result.accepted is False
+
+
+def test_policy_rejects_placeholder_evidence(tmp_path: Path) -> None:
+    policy_path = _write_policy(
+        tmp_path,
+        {
+            "ci": {"required_steps": []},
+            "sbom": {"required": True},
+            "cve": {"max_critical": 0, "max_high": 0},
+            "licenses": {"allow": ["MIT"]},
+        },
+    )
+    metadata = PolicyMetadata(
+        sbom={"warning": "scanner missing"},
+        cve_report={"warning": "scanner missing"},
+        license_report={"warning": "scanner missing", "packages": []},
+    )
+    result = PolicyEvaluator(policy_path).evaluate([], metadata)
+    assert result.accepted is False
+    assert len(result.reasons) == 3

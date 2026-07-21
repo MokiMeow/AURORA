@@ -106,7 +106,7 @@ class AdaptiveScheduler:
             bonus = math.sqrt(2 * math.log(total + 1) / (count + 1))
             ucb_scores[component] = mean + bonus
 
-        target = max(ucb_scores, key=ucb_scores.get)
+        target = max(ucb_scores, key=lambda component: ucb_scores[component])
         self._increase_weight(target, 0.05)
         for component in self.COMPONENTS:
             if component != target:
@@ -127,7 +127,7 @@ class AdaptiveScheduler:
             )
             for component in self.COMPONENTS
         }
-        target = max(contributions, key=contributions.get)
+        target = max(contributions, key=lambda component: contributions[component])
         self._increase_weight(target, 0.05)
         for component in self.COMPONENTS:
             if component != target:

@@ -45,7 +45,7 @@ class EvaluationService:
         self._dataset_manager.ensure(suite)
         suite.artifacts_dir.mkdir(parents=True, exist_ok=True)
         self._config.results_dir.mkdir(parents=True, exist_ok=True)
-        run_id = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+        run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         PDCAEntry(
             phase="Check",
             event="evaluation_start",
@@ -74,7 +74,7 @@ class EvaluationService:
             "stderr": process.stderr,
             "profile": suite.profile,
             "run_id": run_id,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         result_path.write_text(json.dumps(raw_result, indent=2), encoding="utf-8")
         metrics = self._compute_metrics(raw_result, suite)
@@ -173,7 +173,7 @@ class EvaluationService:
         sbom_payload = {
             "suite": suite.name,
             "run_id": run_id,
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
         }
         sbom_path.write_text(json.dumps(sbom_payload, indent=2), encoding="utf-8")
         return sbom_path
@@ -216,5 +216,5 @@ class EvaluationService:
         return self._compliance_policy.evaluate(report)
 
     def _publish_governance_bundle(self, suite: SuiteConfig, report: dict[str, Any], issues: list[str]) -> None:
-        bundle_path = Path("docs/governance/bundles") / f"{suite.name}_latest.json"
+        bundle_path = self._config.governance_bundle_dir / f"{suite.name}_latest.json"
         assemble_bundle(bundle_path, report, overrides=[{"issues": issues}] if issues else None)

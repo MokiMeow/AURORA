@@ -2,12 +2,12 @@
 
 Phase 7 ships a dedicated plugin marketplace:
 
-- urora-se plugin create <name> — scaffold a new extension module.
-- urora-se plugin install --spec module:Class --source . — add to registry and config.
-- urora-se plugin list — view config and registry entries.
-- urora-se plugin remove <name> — uninstall from registry/config.
-- urora-se plugin sign <name> — display signature hash.
-- urora-se plugin publish <name> — publish manifest to rtifacts/extensions/ for sharing.
+- aurora-se plugin create <name> â€” scaffold a new extension module.
+- aurora-se plugin install --spec module:Class --source . â€” add to registry and config.
+- aurora-se plugin list â€” view config and registry entries.
+- aurora-se plugin remove <name> â€” uninstall from registry/config.
+- aurora-se plugin sign <name> â€” display signature hash.
+- aurora-se plugin publish <name> â€” publish manifest to artifacts/extensions/ for sharing.
 
 The shell /plugin commands allow enabling/disabling specs without leaving the REPL.
 

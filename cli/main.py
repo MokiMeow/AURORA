@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-import random
 import shutil
 import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable
 
 import typer
 import yaml
@@ -106,9 +105,15 @@ def root(ctx: typer.Context, version: bool = typer.Option(False, "--version", is
 
 
 @app.command()
-def init() -> None:
-    """Bootstrap configuration for the current repository."""
-    typer.echo("Initializing AURORA-SE workspace (placeholder)")
+def init(
+    root: Path = typer.Option(Path.cwd(), "--root", file_okay=False, dir_okay=True),
+) -> None:
+    """Prepare local runtime directories for an AURORA-SE workspace."""
+
+    resolved_root = root.resolve()
+    for relative_path in ("artifacts", "telemetry", "experience"):
+        (resolved_root / relative_path).mkdir(parents=True, exist_ok=True)
+    typer.echo(f"Initialized AURORA-SE workspace at {resolved_root}")
 
 
 @app.command()
@@ -849,6 +854,12 @@ def policy_check(
     profile: str | None = typer.Option(None, "--profile", help="Profile name; defaults to active."),
     config: Path = typer.Option(Path("configs/policy_profiles.yaml"), "--config"),
     results: Path | None = typer.Option(None, "--results", exists=True, help="CI results JSON path."),
+    metadata: Path | None = typer.Option(
+        None,
+        "--metadata",
+        exists=True,
+        help="SBOM, CVE, and license evidence JSON path.",
+    ),
 ) -> None:
     """Validate CI results against the configured policy."""
 
@@ -860,22 +871,16 @@ def policy_check(
         raise typer.BadParameter(f"Profile '{active_profile}' not found in {config}.")
     policy_path = Path(profiles[active_profile]["path"])
     evaluator = PolicyEvaluator(policy_path)
-    required_steps = profiles[active_profile].get("required_steps")
     payload: list[dict[str, Any]]
-    if results:
-        payload = json.loads(results.read_text(encoding="utf-8"))
-        if not isinstance(payload, list):
-            raise typer.BadParameter("Results file must contain a list of step dictionaries.")
-    else:
-        policy_data = yaml.safe_load(Path(profiles[active_profile]["path"]).read_text(encoding="utf-8"))
-        required = policy_data.get("ci", {}).get("required_steps", [])
-        payload = [{"step": step, "success": True} for step in required]
-    metadata = {
-        "sbom": "artifacts/sbom/latest.json",
-        "cve_report": {"summary": {"critical": 0, "high": 0}},
-        "license_report": {"packages": [{"name": "aurora", "license": "MIT"}]},
-    }
-    outcome = evaluator.evaluate(payload, metadata=metadata)
+    if results is None:
+        raise typer.BadParameter("--results is required; policy checks do not fabricate CI evidence.")
+    payload = json.loads(results.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        raise typer.BadParameter("Results file must contain a list of step dictionaries.")
+    evidence = json.loads(metadata.read_text(encoding="utf-8")) if metadata else None
+    if evidence is not None and not isinstance(evidence, dict):
+        raise typer.BadParameter("Metadata file must contain a JSON object.")
+    outcome = evaluator.evaluate(payload, metadata=evidence)
     typer.echo(json.dumps({"accepted": outcome.accepted, "reasons": outcome.reasons}, indent=2))
 
 
@@ -1219,13 +1224,14 @@ def _render_plan_output(plan_path: Path, fmt: str, telemetry: dict[str, Any] | N
 
 
 def _render_autopilot_report(report: AutopilotReport, fmt: str) -> None:
+    artifacts = {key: str(value) for key, value in report.artifacts.items()}
     payload = {
         "run_id": report.run_id,
         "task": report.task,
         "steps": list(report.steps),
         "duration_seconds": round(report.duration_seconds, 3),
         "estimated_tokens": report.estimated_tokens,
-        "artifacts": {k: str(v) for k, v in report.artifacts.items()},
+        "artifacts": artifacts,
     }
     if fmt == "json":
         typer.echo(json.dumps(payload, indent=2))
@@ -1240,7 +1246,7 @@ def _render_autopilot_report(report: AutopilotReport, fmt: str) -> None:
         ]
         lines.extend(f"- {step}" for step in report.steps)
         lines.append("## Artifacts")
-        lines.extend(f"- {name}: `{path}`" for name, path in payload["artifacts"].items())
+        lines.extend(f"- {name}: `{path}`" for name, path in artifacts.items())
         typer.echo("\n".join(lines))
         return
     typer.echo(f"Autopilot run {payload['run_id']} completed in {payload['duration_seconds']}s")
@@ -1248,7 +1254,7 @@ def _render_autopilot_report(report: AutopilotReport, fmt: str) -> None:
     for step in report.steps:
         typer.echo(f"- {step}")
     typer.echo("Artifacts:")
-    for name, path in payload["artifacts"].items():
+    for name, path in artifacts.items():
         typer.echo(f"- {name}: {path}")
     typer.echo(f"Estimated tokens: {report.estimated_tokens}")
 
