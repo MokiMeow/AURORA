@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Iterable
@@ -73,7 +73,7 @@ class ExperienceLogger:
         )
 
     def _prepare_entry(self, record: ExperienceRecord) -> dict[str, Any]:
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         context = self._redact_mapping(record.context)
         edit = self._redact_mapping(record.edit)
         telemetry = self._redact_mapping(record.telemetry)
@@ -128,7 +128,7 @@ class ExperienceLogger:
 
     def _enforce_limits(self) -> None:
         entries = self._load_entries()
-        cutoff = datetime.utcnow() - timedelta(days=self._retention_days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=self._retention_days)
 
         filtered: list[dict[str, Any]] = []
         for entry in entries:
@@ -139,6 +139,8 @@ class ExperienceLogger:
                 entry_time = datetime.fromisoformat(timestamp)
             except ValueError:
                 continue
+            if entry_time.tzinfo is None:
+                entry_time = entry_time.replace(tzinfo=timezone.utc)
             if entry_time >= cutoff:
                 filtered.append(entry)
 

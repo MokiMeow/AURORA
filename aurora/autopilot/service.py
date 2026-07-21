@@ -8,7 +8,7 @@ import random
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Sequence
+from typing import Callable, Dict, Sequence
 
 from ..planner.pdca import PDCAEntry
 from ..reward.service import RewardService
@@ -47,7 +47,7 @@ class AutopilotService:
         task: str,
         dry_run: bool = False,
         require_confirm: bool = False,
-        confirm_callback: callable | None = None,
+        confirm_callback: Callable[[], bool] | None = None,
         max_iterations: int | None = None,
         max_cost: float | None = None,
         seed: int | None = None,

@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass(slots=True)
@@ -64,10 +64,8 @@ class ExtensionRegistry:
         )
 
     def list(self) -> List[ExtensionManifest]:
-        return sorted(
-            (self.get(name) for name in self._registry.keys()),
-            key=lambda manifest: manifest.name if manifest else "",
-        )
+        manifests = [manifest for name in self._registry if (manifest := self.get(name)) is not None]
+        return sorted(manifests, key=lambda manifest: manifest.name)
 
     def load_specs(self) -> List[str]:
         return [entry["spec"] for entry in self._registry.values()]

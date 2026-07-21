@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -159,7 +159,7 @@ class FirecrackerSandbox(SandboxRunner):
     kernel_image: Path
     rootfs_image: Path
     workspace: Path
-    resources: FirecrackerResources = FirecrackerResources()
+    resources: FirecrackerResources = field(default_factory=FirecrackerResources)
     network: FirecrackerNetwork | None = None
     egress_allowed: bool = False
     firecracker_bin: str = "firecracker"

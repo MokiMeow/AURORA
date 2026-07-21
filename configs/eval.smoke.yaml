@@ -1,0 +1,20 @@
+results_dir: artifacts/eval/smoke_results
+governance_bundle_dir: artifacts/eval/governance_bundles
+dataset_manager:
+  cache_dir: artifacts/eval/smoke_cache
+  manifest_path: artifacts/eval/smoke_manifest.json
+  auto_update: false
+  ttl_hours: 24
+analytics:
+  metrics_csv: artifacts/eval/smoke_results/metrics.csv
+  dashboard_html: artifacts/eval/smoke_dashboard.html
+  compare_dir: artifacts/eval/smoke_results/compare
+defaults:
+  artifacts: artifacts/eval
+  schedule: ci
+  profile: smoke
+  timeout_minutes: 5
+suites:
+  evaluation-smoke:
+    command: ["python", "../../../scripts/eval_smoke.py"]
+    dataset: artifacts/eval/smoke_dataset

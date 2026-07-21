@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Iterable, List
+from typing import Any, List
 
 from .adaptive import AdaptiveScheduler
 from .calculator import RewardCalculator

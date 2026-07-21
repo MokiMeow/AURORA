@@ -6,10 +6,10 @@ REPORT="${ARTIFACT_DIR}/chaos_report.json"
 mkdir -p "${ARTIFACT_DIR}"
 
 echo "[chaos] Injecting sandbox failure scenarios"
-python - <<'PY'
+python - > "${REPORT}" <<'PY'
 import json
 import random
-from datetime import datetime
+from datetime import datetime, timezone
 
 scenarios = [
     "kill-planner",
@@ -21,9 +21,9 @@ scenarios = [
 choice = random.choice(scenarios)
 report = {
     "scenario": choice,
-    "timestamp": datetime.utcnow().isoformat() + "Z",
+    "timestamp": datetime.now(timezone.utc).isoformat(),
     "status": "simulated",
 }
 print(json.dumps(report))
-PY > "${REPORT}"
+PY
 

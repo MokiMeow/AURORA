@@ -25,10 +25,10 @@ class ExtensionManager:
         module_name, class_name = spec.split(":", 1)
         module = importlib.import_module(module_name)
         extension_cls = getattr(module, class_name)
-        instance = extension_cls()  # type: ignore[call-arg]
+        instance = extension_cls()
         if not isinstance(instance, AuroraExtension):
             raise TypeError(f"Extension {spec} does not implement AuroraExtension")
-        return instance  # type: ignore[return-value]
+        return instance
 
     @classmethod
     def from_config(cls, path: Path) -> "ExtensionManager":

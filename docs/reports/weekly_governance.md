@@ -1,4 +1,4 @@
 # Weekly Governance Report
 
-Metrics CSV: C:\Users\smohi\AppData\Local\Temp\pytest-of-smohi\pytest-182\test_report_weekly0\metrics.csv
-Dashboard: C:\Users\smohi\AppData\Local\Temp\pytest-of-smohi\pytest-182\test_report_weekly0\dashboard.html
+Metrics CSV: eval/results/metrics.csv
+Dashboard: docs/reports/weekly_dashboard.html

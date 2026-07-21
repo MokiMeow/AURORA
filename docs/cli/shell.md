@@ -1,19 +1,19 @@
 # Interactive Shell
 
-The urora-se shell command offers a REPL with streaming output and the / commands described in plan.md.
+The aurora-se shell command offers a REPL with streaming output and the / commands described in plan.md.
 
 ## Slash Commands
-- /context — display approvals, model, critic state, and active session.
-- /model <profile> — switch the default planner route.
-- /critic on|off — toggle critic consensus.
-- /allow <tool> / /deny <tool> — manage tool permissions.
-- /session save <name> / /session load <id> — manage sessions without leaving the shell.
-- /workspace snapshot|restore <tag> — capture or restore workspace archives.
-- /autopilot <task> — launch a dry-run autopilot cycle.
-- /plugin list|enable|disable <spec> — inspect and toggle extensions.
-- /logs [--tail N] — tail telemetry logs.
-- /reward — show latest reward artifact.
-- /policy — run policy validation.
-- /help — show command list.
-- /quit — exit the REPL.
+- /context â€” display approvals, model, critic state, and active session.
+- /model <profile> â€” switch the default planner route.
+- /critic on|off â€” toggle critic consensus.
+- /allow <tool> / /deny <tool> â€” manage tool permissions.
+- /session save <name> / /session load <id> â€” manage sessions without leaving the shell.
+- /workspace snapshot|restore <tag> â€” capture or restore workspace archives.
+- /autopilot <task> â€” launch a dry-run autopilot cycle.
+- /plugin list|enable|disable <spec> â€” inspect and toggle extensions.
+- /logs [--tail N] â€” tail telemetry logs.
+- /reward â€” show latest reward artifact.
+- /policy â€” run policy validation.
+- /help â€” show command list.
+- /quit â€” exit the REPL.
 

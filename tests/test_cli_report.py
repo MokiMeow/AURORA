@@ -9,7 +9,8 @@ from cli.main import app
 runner = CliRunner()
 
 
-def test_report_weekly(tmp_path: Path) -> None:
+def test_report_weekly(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.chdir(tmp_path)
     metrics = tmp_path / "metrics.csv"
     dashboard = tmp_path / "dashboard.html"
     metrics.write_text("suite,success\nlite,1\n", encoding="utf-8")

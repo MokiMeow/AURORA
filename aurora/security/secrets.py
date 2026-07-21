@@ -86,8 +86,9 @@ class SecretScanner:
                     self._errors.log(
                         "secret_scanner_error",
                         f"{scanner.name} invocation failed",
-                        {"path": str(path), "error": str(exc)},
+                        {"path": str(path), "error_type": type(exc).__name__},
                     )
+                hit = True
                 continue
             if result.returncode not in scanner.allow_exit_codes:
                 self._log_secret(scanner.name, path, result)
@@ -102,7 +103,12 @@ class SecretScanner:
             self._errors.log(
                 "secret_detection",
                 f"{scanner} detected potential secret",
-                {"path": str(path), "stdout": result.stdout, "stderr": result.stderr},
+                {
+                    "path": str(path),
+                    "returncode": result.returncode,
+                    "stdout_present": bool(result.stdout.strip()),
+                    "stderr_present": bool(result.stderr.strip()),
+                },
             )
 
 

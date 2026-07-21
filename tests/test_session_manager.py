@@ -23,3 +23,13 @@ def test_session_list(tmp_path: Path) -> None:
     manager.start("first")
     sessions = list(manager.list())
     assert len(sessions) == 1
+
+
+def test_session_id_cannot_escape_root(tmp_path: Path) -> None:
+    manager = SessionManager(tmp_path / "sessions")
+    try:
+        manager.resume("../outside")
+    except ValueError as exc:
+        assert "session id" in str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("ValueError expected")

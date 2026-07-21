@@ -44,4 +44,5 @@ class EvaluationConfig:
     results_dir: Path
     dataset_manager: DatasetManagerConfig
     analytics: AnalyticsConfig
+    governance_bundle_dir: Path = Path("docs/governance/bundles")
 

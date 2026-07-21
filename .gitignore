@@ -2,11 +2,10 @@
 __pycache__/
 .pytest_cache/
 .ruff_cache/
-artifacts/
-telemetry/
-experience/log.jsonl
-adapters/
-artifacts/
+/artifacts/
+/telemetry/
+/experience/log.jsonl
+/adapters/
 *.pyc
 *.pyo
 *.pyd
@@ -19,7 +18,7 @@ node_modules/
 .vscode/
 *.env
 
-experience/indices/
+/experience/indices/
 
 
-experience/*.jsonl
+/experience/*.jsonl

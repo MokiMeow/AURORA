@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from aurora.reward import load_reward_config
 
 
@@ -76,3 +78,25 @@ regression_suite:
     assert config.experience_vault.compress is True
     assert config.regression.enabled is False
     assert config.regression.fixtures_path == tmp_path / "fixtures"
+
+
+def test_load_reward_config_rejects_output_outside_root(tmp_path: Path) -> None:
+    config_path = tmp_path / "reward.yaml"
+    config_path.write_text(
+        "explainability:\n  store_path: ../outside\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="reward report store path"):
+        load_reward_config(tmp_path, config_path)
+
+
+def test_load_reward_config_rejects_history_outside_store(tmp_path: Path) -> None:
+    config_path = tmp_path / "reward.yaml"
+    config_path.write_text(
+        "explainability:\n  store_path: reports\n  history_filename: ../history.jsonl\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="reward history filename"):
+        load_reward_config(tmp_path, config_path)

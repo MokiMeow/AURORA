@@ -50,6 +50,7 @@ def test_evaluation_service_runs_and_generates_artifacts(monkeypatch, tmp_path: 
         results_dir=tmp_path / "results",
         dataset_manager=dataset_manager,
         analytics=analytics,
+        governance_bundle_dir=tmp_path / "bundles",
     )
 
     def fake_run(*args, **kwargs):  # type: ignore[no-redef]
@@ -65,6 +66,7 @@ def test_evaluation_service_runs_and_generates_artifacts(monkeypatch, tmp_path: 
     assert result.compliance_path.exists()
     assert result.sbom_path and result.sbom_path.exists()
     assert result.telemetry_path and result.telemetry_path.exists()
+    assert (config.governance_bundle_dir / "lite_latest.json").exists()
     metrics = json.loads(result.metrics_path.read_text(encoding="utf-8"))
     assert metrics["success_rate"] == 0.8
     assert metrics["patch_correct"] == 3

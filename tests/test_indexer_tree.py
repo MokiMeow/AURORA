@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from aurora.indexer.config import IndexerConfig, LanguageConfig
 from aurora.indexer.tree import TreeSitterParser
 
@@ -36,4 +38,20 @@ def test_parser_scans_python_files(tmp_path: Path):
     assert len(units) == 1
     assert units[0].language == "python"
     assert units[0].symbols
+
+
+def test_parser_skips_symlinked_source_files(tmp_path: Path):
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    outside = tmp_path / "outside.py"
+    outside.write_text("outside = True\n", encoding="utf-8")
+    linked = repository / "linked.py"
+    try:
+        linked.symlink_to(outside)
+    except OSError:
+        pytest.skip("File symlinks are unavailable on this system")
+
+    parser = TreeSitterParser(make_config(repository))
+
+    assert list(parser.scan_repository(repository)) == []
 

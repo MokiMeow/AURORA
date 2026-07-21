@@ -2,8 +2,8 @@
 
 Configure outbound channels in configs/notify.yaml and send messages via:
 
-- urora-se notify slack "Release cut" — logs a Slack event with webhook metadata.
-- urora-se notify email --subject "Incident" "Body" — records an email notification.
-- urora-se notify webhook deploy --payload payload.json — persists a webhook call with payload data.
+- aurora-se notify slack "Release cut" â€” logs a Slack event with webhook metadata.
+- aurora-se notify email --subject "Incident" "Body" â€” records an email notification.
+- aurora-se notify webhook deploy --payload payload.json â€” persists a webhook call with payload data.
 
-All notifications are appended to rtifacts/notify/log.jsonl for compliance auditing.
+All notifications are appended to artifacts/notify/log.jsonl for compliance auditing.

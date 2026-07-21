@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, List
 
@@ -62,7 +62,7 @@ class RewardEngine:
         self._api = RewardAPI(self._history_path)
 
     def compute_reward(self, ci_results: List[dict[str, Any]]) -> RewardResult:
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         snapshot = self._collector.from_ci_results(ci_results)
         bias_penalty_value = self._compute_bias_penalty(snapshot.bias_score)
         inputs = RewardInputs(
@@ -119,7 +119,7 @@ class RewardEngine:
             self._reporter.write(observation)
 
         self._log_experience(observation, ci_results)
-        self._metrics.record_reward(metrics_dict.get("suite", "ci"), reward)
+        self._metrics.record_reward(str(metrics_dict.get("suite", "ci")), reward)
         PDCAEntry(
             phase="Check",
             event="reward_calculated",

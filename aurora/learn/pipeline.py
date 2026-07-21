@@ -103,8 +103,8 @@ class SFTPipeline:
         if self._simulate:
             return "simulated"
         try:  # pragma: no cover - optional dependency probe
-            import accelerate  # type: ignore  # noqa: F401
-            import peft  # type: ignore  # noqa: F401
+            import accelerate  # noqa: F401
+            import peft  # noqa: F401
 
             return "accelerate"
         except ImportError:

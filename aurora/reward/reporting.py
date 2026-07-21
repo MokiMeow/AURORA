@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
+from html import escape
 from pathlib import Path
 from string import Template
 from typing import Any, Iterable, List
@@ -88,7 +89,7 @@ class RewardReportWriter:
         self._trend_path = self._store_path / trend_filename
 
     def write(self, observation: RewardObservation) -> None:
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         record = {
             "timestamp": timestamp,
             "reward": observation.reward,
@@ -117,7 +118,7 @@ class RewardReportWriter:
 
         template = Template(template_str)
         html = template.safe_substitute(
-            timestamp=record["timestamp"],
+            timestamp=escape(str(record["timestamp"])),
             reward=f"{record['reward']:.3f}",
             status_class="success" if record["success"] else "failure",
             status_label="Accepted" if record["success"] else "Rejected",
@@ -140,18 +141,21 @@ class RewardReportWriter:
                 display = f"{value:.3f}"
             else:
                 display = str(value)
-            rows.append(f"<tr><th>{key}</th><td>{display}</td></tr>")
+            rows.append(
+                f"<tr><th>{escape(str(key))}</th><td>{escape(display)}</td></tr>"
+            )
         return "\n      ".join(rows)
 
     @staticmethod
     def _reasons_list(reasons: Iterable[str]) -> str:
         if not reasons:
             return "<li>No policy notes</li>"
-        return "\n    ".join(f"<li>{reason}</li>" for reason in reasons)
+        return "\n    ".join(f"<li>{escape(str(reason))}</li>" for reason in reasons)
 
     def _timeline_section(self, history: List[dict[str, Any]]) -> str:
         items = "\n    ".join(
-            f"<li>{entry['timestamp']} — reward={entry['reward']:.3f} success={entry['success']}</li>"
+            f"<li>{escape(str(entry['timestamp']))} &mdash; "
+            f"reward={entry['reward']:.3f} success={entry['success']}</li>"
             for entry in history[-10:]
         )
         return f"<h2>Recent Trend</h2><ul>{items}</ul>"
@@ -159,9 +163,9 @@ class RewardReportWriter:
     def _timeline_page(self, history: List[dict[str, Any]]) -> str:
         rows = "\n".join(
             "<tr>"
-            f"<td>{entry['timestamp']}</td>"
+            f"<td>{escape(str(entry['timestamp']))}</td>"
             f"<td>{entry['reward']:.3f}</td>"
-            f"<td>{'✅' if entry['success'] else '⚠️'}</td>"
+            f"<td>{'Yes' if entry['success'] else 'No'}</td>"
             "</tr>"
             for entry in history[-self._keep_last :]
         )
@@ -187,7 +191,7 @@ class RewardReportWriter:
       {rows}
     </tbody>
   </table>
-  <p>Generated at {datetime.utcnow().isoformat()}</p>
+  <p>Generated at {datetime.now(timezone.utc).isoformat()}</p>
 </body>
 </html>
 """

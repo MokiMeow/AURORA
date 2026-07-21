@@ -1,10 +1,10 @@
 # Workspace Snapshots
 
-The workspace module captures reproducible archives under rtifacts/workspace/:
+The workspace module captures reproducible archives under artifacts/workspace/:
 
-- urora-se workspace snapshot --tag <tag> — tarball the repo for reproducibility.
-- urora-se workspace restore <tag> — restore a stored snapshot.
-- urora-se workspace status — summarize inventory and storage footprint.
+- aurora-se workspace snapshot --tag <tag> â€” tarball the repo for reproducibility.
+- aurora-se workspace restore <tag> â€” restore a stored snapshot.
+- aurora-se workspace status â€” summarize inventory and storage footprint.
 
 Snapshots are referenced by the session manager and autopilot artifacts for auditing.
 

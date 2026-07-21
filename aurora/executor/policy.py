@@ -42,7 +42,7 @@ class PolicyEvaluator:
                 accepted = False
                 reasons.append(f"CI step failed: {result['step']}")
         for rule in required_steps:
-            if not any(rule in result["step"] and result["success"] for result in ci_results):
+            if not any(rule == result["step"] and result["success"] for result in ci_results):
                 accepted = False
                 reasons.append(f"Required step missing: {rule}")
 
@@ -57,8 +57,16 @@ class PolicyEvaluator:
         sbom_policy = self._policy.get("sbom", {}) if self._policy else {}
         if not sbom_policy.get("required"):
             return
-        if metadata.sbom is None:
+        sbom = metadata.sbom
+        if not isinstance(sbom, dict):
             reasons.append("SBOM artifact missing")
+            return
+        if sbom.get("warning") or sbom.get("error"):
+            reasons.append("SBOM generation did not complete successfully")
+            return
+        components = sbom.get("components", sbom.get("packages"))
+        if not isinstance(components, list) or not components:
+            reasons.append("SBOM contains no package inventory")
 
     def _evaluate_cve(self, metadata: PolicyMetadata, reasons: list[str]) -> None:
         cve_policy = self._policy.get("cve", {}) if self._policy else {}
@@ -68,13 +76,24 @@ class PolicyEvaluator:
         if report is None:
             reasons.append("CVE report missing")
             return
-        summary = report.get("summary", {})
+        if report.get("warning") or report.get("error"):
+            reasons.append("CVE scan did not complete successfully")
+            return
+        summary = report.get("summary")
+        if not isinstance(summary, dict):
+            reasons.append("CVE report summary missing")
+            return
         max_critical = cve_policy.get("max_critical", 0)
         max_high = cve_policy.get("max_high", 0)
-        if summary.get("critical", 0) > max_critical:
-            reasons.append(f"Critical vulnerabilities exceed threshold ({summary.get('critical')} > {max_critical})")
-        if summary.get("high", 0) > max_high:
-            reasons.append(f"High vulnerabilities exceed threshold ({summary.get('high')} > {max_high})")
+        critical = summary.get("critical")
+        high = summary.get("high")
+        if not isinstance(critical, int) or not isinstance(high, int):
+            reasons.append("CVE report summary is incomplete")
+            return
+        if critical > max_critical:
+            reasons.append(f"Critical vulnerabilities exceed threshold ({critical} > {max_critical})")
+        if high > max_high:
+            reasons.append(f"High vulnerabilities exceed threshold ({high} > {max_high})")
 
     def _evaluate_licenses(self, metadata: PolicyMetadata, reasons: list[str]) -> None:
         license_policy = self._policy.get("licenses", {}) if self._policy else {}
@@ -84,7 +103,13 @@ class PolicyEvaluator:
         if report is None:
             reasons.append("License report missing")
             return
-        packages = report.get("packages", [])
+        if report.get("warning") or report.get("error"):
+            reasons.append("License scan did not complete successfully")
+            return
+        packages = report.get("packages")
+        if not isinstance(packages, list) or not packages:
+            reasons.append("License report contains no package inventory")
+            return
         allowed = set(license_policy.get("allow", []))
         denied = set(license_policy.get("deny", []))
         for package in packages:
@@ -108,8 +133,10 @@ class PolicyEvaluator:
         )
 
     def _load_policy(self) -> dict[str, Any] | None:
-        if not self._policy_path or not self._policy_path.exists():
+        if not self._policy_path:
             return None
+        if not self._policy_path.exists():
+            raise FileNotFoundError(f"Policy file not found: {self._policy_path}")
         text = self._policy_path.read_text(encoding="utf-8").strip()
         if not text:
             return {}

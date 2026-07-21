@@ -4,8 +4,6 @@ set -euo pipefail
 echo "[E2E] Running end-to-end dry run"
 aurora-se init
 aurora-se index --full
-aurora-se plan --task "Dry run task" --auto
-aurora-se apply --profile fast
-aurora-se eval --suite swe-bench-lite --no-export-metrics
+aurora-se autopilot --task "Dry run task" --dry-run --max-iterations 2
 
 

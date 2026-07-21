@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import shutil
 import tarfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, List
+
+from aurora.paths import require_within, resolve_within
 
 
 @dataclass(slots=True)
@@ -31,10 +32,10 @@ class WorkspaceManager:
         """Create a tar archive snapshot of the current workspace."""
 
         tag = tag or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        archive = self._root / f"{tag}.tar.gz"
+        archive = resolve_within(self._root, f"{tag}.tar.gz", label="snapshot tag")
         include_paths: List[Path]
         if include:
-            include_paths = [Path(p).resolve() for p in include]
+            include_paths = [require_within(Path.cwd(), Path(p), label="snapshot input") for p in include]
         else:
             include_paths = [Path.cwd()]
 
@@ -49,18 +50,24 @@ class WorkspaceManager:
     def restore(self, tag: str, destination: Path | None = None) -> Path:
         """Restore a snapshot into the destination directory."""
 
-        archive = self._root / f"{tag}.tar.gz"
+        archive = resolve_within(self._root, f"{tag}.tar.gz", label="snapshot tag")
         if not archive.exists():
             raise FileNotFoundError(f"Snapshot '{tag}' not found at {archive}")
-        destination = destination or Path.cwd()
+        destination = (destination or Path.cwd()).resolve()
+        destination.mkdir(parents=True, exist_ok=True)
         with tarfile.open(archive, mode="r:gz") as tar:
-            tar.extractall(destination)
+            members = tar.getmembers()
+            for member in members:
+                if member.issym() or member.islnk() or not (member.isfile() or member.isdir()):
+                    raise ValueError(f"Unsupported archive member: {member.name}")
+                resolve_within(destination, member.name, label="archive member")
+            tar.extractall(destination, members=members)
         return destination
 
     def delete(self, tag: str) -> None:
         """Remove a stored snapshot."""
 
-        archive = self._root / f"{tag}.tar.gz"
+        archive = resolve_within(self._root, f"{tag}.tar.gz", label="snapshot tag")
         if archive.exists():
             archive.unlink()
 
@@ -80,7 +87,7 @@ class WorkspaceManager:
             )
         return snapshots
 
-    def status(self) -> dict[str, str | int]:
+    def status(self) -> dict[str, str | int | None]:
         """Return quick status information about snapshots."""
 
         snapshots = self.list()

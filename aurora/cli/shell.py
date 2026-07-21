@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable, List
 
-from ..autopilot import AutopilotReport, AutopilotService
+from ..autopilot import AutopilotService
 from ..executor.policy import PolicyEvaluator
 from ..extensions.registry import ExtensionRegistry
 from ..planner import ModelManager

@@ -1,13 +1,11 @@
-name: Evaluate (Monthly)
+name: Evaluate SWE-Bench Full (Manual)
 
 on:
-  schedule:
-    - cron: "0 5 1 * *"
   workflow_dispatch:
 
 jobs:
   swe-bench-full:
-    uses: ./.github/workflows/templates/eval-suite.yml
+    uses: ./.github/workflows/eval-suite.yml
     with:
       suite: swe-bench-full
       python-version: "3.11"

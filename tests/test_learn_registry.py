@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from aurora.learn.registry import AdapterInfo, AdapterRegistry
+import pytest
 
 
 def _base_metadata() -> dict:
@@ -91,3 +92,15 @@ def test_adapter_registry_register_and_list(tmp_path: Path):
 
     provenance_lines = [json.loads(line) for line in provenance.read_text(encoding="utf-8").splitlines()]
     assert provenance_lines[0]["version"] == "0.1.0"
+
+
+def test_adapter_registry_rejects_path_escape(tmp_path: Path) -> None:
+    registry = AdapterRegistry(tmp_path)
+    info = AdapterInfo(
+        name="../outside",
+        version="0.1.0",
+        path=tmp_path,
+        metadata={"name": "../outside", "version": "0.1.0"},
+    )
+    with pytest.raises(ValueError, match="adapter identity"):
+        registry.register(info)

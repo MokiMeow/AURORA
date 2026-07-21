@@ -7,6 +7,8 @@ from typing import Iterable, Sequence
 
 import yaml
 
+from aurora.paths import resolve_within
+
 from .adaptive import AdaptiveWeights
 from .calculator import RewardWeights
 from .config import (
@@ -29,6 +31,13 @@ def _ensure_sequence(values: Sequence[str] | str | None) -> tuple[str, ...]:
     if isinstance(values, str):
         return (values,)
     return tuple(str(v) for v in values)
+
+
+def _output_name(root: Path, value: object, *, label: str) -> str:
+    """Validate a configured output name and preserve its relative representation."""
+
+    resolved = resolve_within(root, Path(str(value)), label=label)
+    return resolved.relative_to(root.resolve()).as_posix()
 
 
 def load_reward_config(root: Path, path: Path) -> RewardConfig:
@@ -80,7 +89,11 @@ def load_reward_config(root: Path, path: Path) -> RewardConfig:
     )
 
     explain_section = data.get("explainability", {})
-    store_path = root / explain_section.get("store_path", "artifacts/reward_reports")
+    store_path = resolve_within(
+        root,
+        explain_section.get("store_path", "artifacts/reward_reports"),
+        label="reward report store path",
+    )
     formats = explain_section.get("formats")
     if not formats:
         single_format = explain_section.get("format", "json")
@@ -91,12 +104,20 @@ def load_reward_config(root: Path, path: Path) -> RewardConfig:
         keep_last=int(explain_section.get("keep_last", 50)),
         enable_timeline=bool(explain_section.get("enable_timeline", True)),
         html_template=(
-            root / explain_section["html_template"]
+            resolve_within(root, explain_section["html_template"], label="reward HTML template")
             if explain_section.get("html_template")
             else None
         ),
-        history_filename=explain_section.get("history_filename", "reward_history.jsonl"),
-        trend_filename=explain_section.get("trend_filename", "reward_trend.html"),
+        history_filename=_output_name(
+            store_path,
+            explain_section.get("history_filename", "reward_history.jsonl"),
+            label="reward history filename",
+        ),
+        trend_filename=_output_name(
+            store_path,
+            explain_section.get("trend_filename", "reward_trend.html"),
+            label="reward trend filename",
+        ),
     )
 
     acceptance_section = data.get("acceptance", {})
@@ -109,8 +130,16 @@ def load_reward_config(root: Path, path: Path) -> RewardConfig:
 
     experience_section = data.get("experience_vault", {})
     experience = ExperienceVaultConfig(
-        log_path=root / experience_section.get("log_path", "experience/reward.log.jsonl"),
-        index_root=root / experience_section.get("index_root", "experience/indices"),
+        log_path=resolve_within(
+            root,
+            experience_section.get("log_path", "experience/reward.log.jsonl"),
+            label="experience log path",
+        ),
+        index_root=resolve_within(
+            root,
+            experience_section.get("index_root", "experience/indices"),
+            label="experience index root",
+        ),
         max_records=int(experience_section.get("max_records", 5000)),
         retention_days=int(experience_section.get("retention_days", 180)),
         dedupe_fields=_ensure_sequence(experience_section.get("dedupe_fields", ("task", "diff_hash"))),
@@ -121,8 +150,11 @@ def load_reward_config(root: Path, path: Path) -> RewardConfig:
     regression_section = data.get("regression_suite", {})
     regression = RegressionSuiteConfig(
         enabled=bool(regression_section.get("enabled", True)),
-        fixtures_path=root
-        / regression_section.get("fixtures_path", "tests/fixtures/reward_runs"),
+        fixtures_path=resolve_within(
+            root,
+            regression_section.get("fixtures_path", "tests/fixtures/reward_runs"),
+            label="reward regression fixtures path",
+        ),
         tolerance=float(regression_section.get("tolerance", 0.05)),
     )
 

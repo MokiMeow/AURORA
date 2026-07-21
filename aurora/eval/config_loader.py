@@ -48,5 +48,8 @@ def load_evaluation_config(path: Path) -> EvaluationConfig:
         results_dir=Path(data.get("results_dir", "eval/results")),
         dataset_manager=dataset_manager,
         analytics=analytics,
+        governance_bundle_dir=Path(
+            data.get("governance_bundle_dir", "docs/governance/bundles")
+        ),
     )
 
