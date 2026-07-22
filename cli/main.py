@@ -50,7 +50,7 @@ from aurora.session import SessionManager
 from aurora.autopilot import AutopilotConfig, AutopilotReport, AutopilotService
 from aurora.extensions.manager import ExtensionManager
 from aurora.extensions.registry import ExtensionRegistry
-from aurora.workspace import WorkspaceManager
+from aurora.workspace import WorkspaceManager, bootstrap_workspace
 from aurora.planner import ModelManager
 from aurora.api import APIService
 from aurora.governance.bundle import assemble_bundle
@@ -108,12 +108,12 @@ def root(ctx: typer.Context, version: bool = typer.Option(False, "--version", is
 def init(
     root: Path = typer.Option(Path.cwd(), "--root", file_okay=False, dir_okay=True),
 ) -> None:
-    """Prepare local runtime directories for an AURORA-SE workspace."""
+    """Prepare runtime directories and default resources for an AURORA-SE workspace."""
 
     resolved_root = root.resolve()
-    for relative_path in ("artifacts", "telemetry", "experience"):
-        (resolved_root / relative_path).mkdir(parents=True, exist_ok=True)
+    result = bootstrap_workspace(resolved_root)
     typer.echo(f"Initialized AURORA-SE workspace at {resolved_root}")
+    typer.echo(f"Created {result.created} default files; skipped {result.skipped} existing files")
 
 
 @app.command()
