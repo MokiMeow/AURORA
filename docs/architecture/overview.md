@@ -24,6 +24,36 @@ All components operate in a workspace root with sandboxed execution boundaries; 
 - Builds prompts by combining repository intelligence, telemetry snippets, and the experience vault, then routes the request via `PlannerRouter` to the appropriate provider (Ollama, OpenAI, Anthropic, Google) with configurable consensus across critics.
 - Emits PDCA events for every planning run, persists planner sessions (`artifacts/planner_sessions/`), and archives sanitized artifacts (`artifacts/planner_output.txt`, `artifacts/self_edit.json`, critic feedback).
 
+#### Provider HTTP contract
+
+The planner uses JSON over `httpx` directly; no provider SDK is required. The
+bundled default route is local Ollama. Cloud routes and cloud critics remain
+opt-in: operators must configure their endpoints/routes and provide credentials
+through the environment. No credentials are stored in `configs/model.yaml`.
+
+| Provider | Authentication | Supported responses |
+| --- | --- | --- |
+| Ollama | None for the bundled local route | JSON or `application/x-ndjson` |
+| OpenAI | `Authorization: Bearer` from the route's `api_key_env` (sample: `OPENAI_API_KEY`) | JSON or server-sent events |
+| Anthropic | `x-api-key` from `api_key_env` (sample: `ANTHROPIC_API_KEY`) plus `anthropic-version` | Messages JSON or text-delta server-sent events |
+| Gemini | `x-goog-api-key` from `api_key_env` (sample: `GEMINI_API_KEY`) | Candidate JSON or candidate server-sent events |
+
+Critics declare their provider explicitly. The sample disabled critics use
+`CRITIC_GPT4O_API_KEY` and `CRITIC_GEMINI_API_KEY`. If any selected cloud route
+or enabled critic names a credential environment variable that is absent, the
+request fails before network I/O. Error messages never include credential or
+response-body values.
+
+Anthropic routes default to API version `2023-06-01`; set
+`extra.api_version` on a route to select another supported version. Streaming
+parsers ignore terminal markers, accumulate usable text chunks, and reject
+provider error records or successful responses that contain no usable text.
+
+Planner retries are limited to transport/timeouts and HTTP 408, 425, 429, and
+5xx responses. Other 4xx responses fail after one request. Exponential backoff
+and valid `Retry-After` delays are capped at 60 seconds and attempts never
+exceed `retry_policy.max_attempts`.
+
 ### Executor (`aurora.executor`)
   - Applies patches through `git apply` with a dry-run guard and three-way merge fallback, rejects edits that delete tests, and scans for secrets (regex + TruffleHog/GitLeaks backends) before running CI.
   - Runs CI profiles through hardened sandbox runners (local process isolation, Docker with seccomp/AppArmor/read-only root, and Firecracker microVMs launched via `firectl`) while enforcing policy gates defined in `policies/security.yaml` and persisting security artifacts (SBOM, CVE, license reports).

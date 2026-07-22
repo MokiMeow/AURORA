@@ -25,6 +25,7 @@ class CriticConfig:
     endpoint: str
     api_key_env: str | None = None
     enabled: bool = False
+    provider: str | None = None
 
 
 @dataclass(slots=True)

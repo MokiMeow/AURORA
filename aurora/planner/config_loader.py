@@ -32,6 +32,7 @@ def load_planner_config(path: Path) -> PlannerConfig:
         CriticConfig(
             name=critic["name"],
             endpoint=critic["endpoint"],
+            provider=critic.get("provider"),
             api_key_env=critic.get("api_key_env"),
             enabled=critic.get("enabled", False),
         )
