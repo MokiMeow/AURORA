@@ -22,9 +22,6 @@ from .pdca import PDCAEntry
 
 LOGGER = logging.getLogger(__name__)
 
-ARTIFACTS_DIR = Path("artifacts")
-ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
-
 
 class PlannerService:
     def __init__(
@@ -33,6 +30,7 @@ class PlannerService:
         graph_store: GraphStore,
         embedding_store: EmbeddingStore,
         experience_vault: ExperienceVault | None = None,
+        artifacts_dir: Path = Path("artifacts"),
     ) -> None:
         self._config_path = config_path
         self._graph_store = graph_store
@@ -41,6 +39,7 @@ class PlannerService:
         self._experience_vault = experience_vault or ExperienceVault(
             self._config.experience_config.path if self._config.experience_config else None
         )
+        self._artifacts_dir = artifacts_dir
         self._client = PlannerClient(self._config)
         self._router = PlannerRouter(self._config)
         self._context_packer = build_context_packer(
@@ -145,7 +144,7 @@ class PlannerService:
         try:
             self_edit = SelfEdit.model_validate(payload)
         except ValidationError as exc:
-            error_path = ARTIFACTS_DIR / "latest_planner_error.json"
+            error_path = self._artifact_path("latest_planner_error.json")
             error_path.write_text(exc.json())
             raise
         return self_edit
@@ -162,7 +161,7 @@ class PlannerService:
                     "policy_notes": result["response"].get("policy_notes", []),
                 }
             )
-        artifact_path = ARTIFACTS_DIR / "critic_outputs.json"
+        artifact_path = self._artifact_path("critic_outputs.json")
         artifact_path.write_text(json.dumps(processed, indent=2))
         PDCAEntry(
             phase="Plan",
@@ -171,10 +170,13 @@ class PlannerService:
         )
         return outcome
 
-    @staticmethod
-    def _write_artifact(filename: str, content: str) -> None:
-        path = ARTIFACTS_DIR / filename
+    def _write_artifact(self, filename: str, content: str) -> None:
+        path = self._artifact_path(filename)
         path.write_text(content)
+
+    def _artifact_path(self, filename: str) -> Path:
+        self._artifacts_dir.mkdir(parents=True, exist_ok=True)
+        return self._artifacts_dir / filename
 
     def _persist_session(
         self,
@@ -187,7 +189,7 @@ class PlannerService:
         experience,
         critic_outcome,
     ) -> None:
-        session_dir = ARTIFACTS_DIR / "planner_sessions"
+        session_dir = self._artifacts_dir / "planner_sessions"
         session_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
         session = {

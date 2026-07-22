@@ -18,12 +18,32 @@ AURORA-SE is a self-adapting engineering system that plans, applies, verifies, a
 
 ### Getting Started
 
-1. Use Python 3.10–3.12 and create a virtual environment.
-2. Install the project and development tools: `python -m pip install -e '.[dev]'`.
-3. Prepare runtime directories: `aurora-se init`.
-4. Run checks: `python -m ruff check .`, `python -m mypy aurora cli`, and `python -m pytest`.
-5. Optionally install Git hooks with `pre-commit install` and start local services with `docker compose up -d`.
-6. See `docs/quickstart.md` for the full local workflow.
+Use Python 3.10–3.12 and create a virtual environment. For development from a
+source checkout, install the project and development tools in editable mode:
+
+```shell
+python -m pip install -e '.[dev]'
+aurora-se init
+python -m ruff check .
+python -m mypy aurora cli
+python -m pytest
+```
+
+For use from a built wheel, install the wheel and initialize a workspace at the
+directory where you want to run AURORA-SE:
+
+```shell
+python -m pip install aurora_se-0.1.0-py3-none-any.whl
+aurora-se init --root /path/to/workspace
+```
+
+Initialization creates the runtime directories and copies the bundled default
+configurations, policies, prompts, queries, and automation scripts. It copies
+only missing files, so re-running `init` preserves user changes. `pyproject.toml`
+is the supported dependency source until the project adopts a universal lock
+file.
+
+Optionally install Git hooks with `pre-commit install` and start local services
+with `docker compose up -d`. See `docs/quickstart.md` for the full local workflow.
 
 SWE-Bench workflows are manual by design. Before dispatching one, place the corresponding licensed dataset and runner under `datasets/swe-bench-*`; the workflow validates those inputs and fails clearly when they are absent.
-

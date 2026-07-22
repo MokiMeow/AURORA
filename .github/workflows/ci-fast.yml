@@ -39,6 +39,28 @@ jobs:
       - name: Tests
         run: python -m pytest
 
+      - name: Installed wheel workspace smoke test
+        if: matrix.python-version == '3.12'
+        run: |
+          wheel_dir="$RUNNER_TEMP/aurora-wheel"
+          wheel_venv="$RUNNER_TEMP/aurora-wheel-venv"
+          workspace="$RUNNER_TEMP/aurora-workspace"
+          empty_dir="$RUNNER_TEMP/aurora-empty"
+          python -m pip wheel . --no-deps --wheel-dir "$wheel_dir"
+          python -m venv --system-site-packages "$wheel_venv"
+          wheel_path=$(find "$wheel_dir" -maxdepth 1 -name '*.whl' -print -quit)
+          "$wheel_venv/bin/python" -m pip install --force-reinstall --no-deps "$wheel_path"
+          "$wheel_venv/bin/aurora-se" init --root "$workspace"
+          test -f "$workspace/configs/model.yaml"
+          test -f "$workspace/policies/security.yaml"
+          test -f "$workspace/prompts/planner_v1.md"
+          test -f "$workspace/queries/python.scm"
+          test -f "$workspace/scripts/eval_smoke.py"
+          mkdir "$empty_dir"
+          cd "$empty_dir"
+          "$wheel_venv/bin/aurora-se" --help
+          test -z "$(find . -mindepth 1 -print -quit)"
+
       - name: Evaluation CLI smoke test
         run: aurora-se eval run evaluation-smoke --config configs/eval.smoke.yaml
 
