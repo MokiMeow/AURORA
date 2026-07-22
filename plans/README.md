@@ -8,10 +8,10 @@ to the next plan. The reviewer owns this status table.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 | --- | --- | --- | --- | --- | --- |
-| 001 | Ship a complete installable workspace | P1 | M | - | TODO |
-| 002 | Correct planner provider protocols and retries | P1 | M | - | TODO |
-| 003 | Make executor failures transactional | P1 | M | - | TODO |
-| 004 | Turn local API controls into a real loopback service | P2 | M | 001 | TODO |
+| 001 | Ship a complete installable workspace | P1 | M | - | DONE |
+| 002 | Correct planner provider protocols and retries | P1 | M | - | DONE |
+| 003 | Make executor failures transactional | P1 | M | - | BLOCKED — safe non-mutating three-way preflight could not be proven |
+| 004 | Turn local API controls into a real loopback service | P2 | M | 001 | BLOCKED — verification failed twice under the plan stop rule |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with reason) | REJECTED
 (with rationale).
